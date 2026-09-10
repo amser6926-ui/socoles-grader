@@ -126,62 +126,25 @@ If you use SOCOLES in your research, please cite it as follows:
 ```bibtex
 @software{socoles-autograder,
   author       = {Benard Wanjiru},
-  title        = {SOCOLES: An Automatic SQL Query Grading System},
-  version      = {v1.1.5},
+  title        = {SOCOLES Grader: An Automated SQL Grading System},
+  version      = {v1.2.0},
   url          = {https://github.com/berniegach/socoles-grader},
   year         = {2026},
-  month        = {Jan},
+  month        = {Sep},
   note         = {Accessed: YYYY-MM-DD}
 }
 ```
 
 ## Publications
 
-Feel free to check this publications that describe the grading methodology and evaluation:
+These publications describe the research behind SOCOLES and its grading methodology:
 
-```bibtex
-@InProceedings{benard:2024,
-author={Wanjiru, Benard and Bommel, Patrick van and Hiemstra, Djoerd},
-editor="Daimi, Kevin
-and Al Sadoon, Abeer",
-title="Sensitivity of Automated SQL Grading in Computer Science Courses",
-booktitle="Proceedings of the Third International Conference on Innovations in Computing Research (ICR'24)",
-year="2024",
-publisher="Springer Nature Switzerland",
-address="Cham",
-pages="283--299",
-isbn="978-3-031-65522-7",
-doi = {doi.org/10.1007/978-3-031-65522-7_26}
-}
+- Wanjiru, B., van Bommel, P., and Hiemstra, D. (2026). *Instant Feedback for SQL Assignments Using Clause-Driven Automated Grading*. In *Proceedings of the 31st ACM Conference on Innovation and Technology in Computer Science Education V. 1 (ITiCSE 2026)*, pp. 576-582. Association for Computing Machinery. https://doi.org/10.1145/3803400.3809341
+- Wanjiru, B., van Bommel, P., and Hiemstra, D. (2026). *Clause-Driven Automated Grading of SQL's DDL and DML Statements*. In *Proceedings of the 57th ACM Technical Symposium on Computer Science Education V.1 (SIGCSE TS 2026)*, pp. 1117-1123. Association for Computing Machinery. https://doi.org/10.1145/3770762.3772599
+- Wanjiru, B., van Bommel, P., and Hiemstra, D. (2026). *Automated Feedback in Grading: An SQL Clause-Driven Approach*. In K. Daimi and A. Alsadoon (Eds.), *Emerging Trends in Computer Science and Computer Engineering Education*, *Studies in Systems, Decision and Control* (Vol. 672). Springer. https://doi.org/10.1007/978-3-032-23499-5_14
+- Wanjiru, B., van Bommel, P., and Hiemstra, D. (2024). *Dynamic and Partial Grading of SQL Queries*. *Journal of Engineering Research and Sciences*, 3(8), 1-14. https://doi.org/10.55708/js0308001
+- Wanjiru, B., van Bommel, P., and Hiemstra, D. (2024). *Sensitivity of Automated SQL Grading in Computer Science Courses*. In K. Daimi and A. Al Sadoon (Eds.), *Proceedings of the Third International Conference on Innovations in Computing Research (ICR'24)*, *Lecture Notes in Networks and Systems* (Vol. 1058). Springer. https://doi.org/10.1007/978-3-031-65522-7_26
+- Wanjiru, B., van Bommel, P., and Hiemstra, D. (2023). *Towards a Generic Model for Classifying Software into Correctness Levels and its Application to SQL*. In *2023 IEEE/ACM 5th International Workshop on Software Engineering Education for the Next Generation (SEENG)*, pp. 37-40. https://doi.org/10.1109/SEENG59157.2023.00012
 
-
-@article{benard:jenrs,
-author = {Wanjiru, Benard and Bommel, Patrick van and Hiemstra, Djoerd},
-doi = {10.55708/js0308001} ,
-journal = {Journal of Engineering Research and Sciences},
-number = {},
-pages = {},
-title = {{Dynamic and Partial Grading of SQL Queries}},
-volume = {},
-year = {2024}
-}
-
-@inproceedings{DBLP:conf/icse-seeng/WanjiruBH23,
-  author       = {Benard Wanjiru and Patrick van Bommel and  Djoerd Hiemstra},
-  title        = {Towards a Generic Model for Classifying Software into Correctness
-                  Levels and its Application to {SQL}},
-  booktitle    = {5th {IEEE/ACM} International Workshop on Software Engineering Education
-                  for the Next Generation, SEENG@ICSE 2023, Melbourne, Australia, May
-                  16, 2023},
-  pages        = {37--40},
-  publisher    = {{IEEE}},
-  year         = {2023},
-  url          = {https://doi.org/10.1109/SEENG59157.2023.00012},
-  doi          = {10.1109/SEENG59157.2023.00012},
-  timestamp    = {Tue, 12 Sep 2023 01:00:00 +0200},
-  biburl       = {https://dblp.org/rec/conf/icse-seeng/WanjiruBH23.bib},
-  bibsource    = {dblp computer science bibliography, https://dblp.org}
-}
-```
 
 
