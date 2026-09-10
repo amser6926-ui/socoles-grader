@@ -4,25 +4,15 @@ This repository includes an optional Keycloak container to make SSO login easy f
 
 ## What this gives you
 
-- A Keycloak server on http://keycloak:8080 (published at http://localhost:8080)
+- A Keycloak server published at http://localhost:8080
 - A pre-imported realm: `socoles`
 - A pre-created OIDC client: `socoles-frontend` (confidential)
 - Valid redirect URIs (local):
-  - http://localhost:3000/auth/student/callback
-  - http://localhost:3000/auth/instructor/callback
-- Post logout redirect URI: /
+  - http://localhost:3000/api/auth/callback/*
+  - http://127.0.0.1:3000/api/auth/callback/*
+- Post logout redirect URI: http://localhost:3000/
 
-## One-time setup (host machine)
-
-Because the app (server) and the browser must use the same Issuer URL, we pick `http://keycloak:8080/…` and make the browser resolve `keycloak` to localhost.
-
-Add this line to your host `/etc/hosts` (needs sudo):
-
-```
-127.0.0.1 keycloak
-```
-
-This lets the browser open http://keycloak:8080 and reach the container exposed at 127.0.0.1:8080. The Next.js server inside Docker already reaches `keycloak:8080` via the Docker network.
+No `/etc/hosts` entry is required. The browser uses `localhost:8080`; the frontend container uses `keycloak:8080` on the Docker network.
 
 ## Environment variables
 
@@ -32,9 +22,10 @@ In `.env` (copied from `.env.example`), set:
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=<a-long-random-string>
 KEYCLOAK_ISSUER=http://keycloak:8080/realms/socoles
+KEYCLOAK_ISSUER_PUBLIC=http://localhost:8080/realms/socoles
 KEYCLOAK_CLIENT_ID=socoles-frontend
-KEYCLOAK_CLIENT_SECRET=change-me   # update to the secret you want
-KEYCLOAK_LOGOUT_REDIRECT_URI=http://localhost:3000
+KEYCLOAK_CLIENT_SECRET=change-me
+KEYCLOAK_LOGOUT_REDIRECT_URI=http://localhost:3000/
 ```
 
 You can change the Keycloak admin credentials by setting `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` in `.env`.
@@ -45,7 +36,9 @@ You can change the Keycloak admin credentials by setting `KEYCLOAK_ADMIN` and `K
 docker compose up -d
 ```
 
-Open the admin console at http://keycloak:8080/ and login with the admin credentials. You’ll see the `socoles` realm and `socoles-frontend` client imported.
+Open the admin console at http://localhost:8080/ and login with the admin credentials. You’ll see the `socoles` realm and `socoles-frontend` client imported.
+
+The realm has no predefined users. Use the **Register** option on the Keycloak login page to create one.
 
 ## Production notes
 

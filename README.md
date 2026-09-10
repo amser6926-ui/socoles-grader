@@ -39,22 +39,36 @@ git clone https://github.com/berniegach/socoles-grader.git
 cd socoles-grader
 ```
 
-### 2. Configure environment (.env)
-Copy `.env.example` to `.env` and edit as needed.
+### 2. Create the local environment file
+Run:
 
-Minimum required for local development:
 ```bash
-POSTGRES_PASSWORD=change-me-strong
-SOCOLES_VERSION=1.1.5
-# (optional) defaults already work for localhost
+cp .env.example .env
+```
+
+For a local installation, keep these values in `.env` unchanged, except replace the placeholder passwords and signup code:
+
+```bash
+POSTGRES_PASSWORD=choose-a-local-password
+SOCOLES_VERSION=1.2.0
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 NEXT_PUBLIC_SOCOLES_API_URL=http://localhost:5000
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=choose-a-stable-local-secret
+KEYCLOAK_ISSUER=http://keycloak:8080/realms/socoles
+KEYCLOAK_ISSUER_PUBLIC=http://localhost:8080/realms/socoles
+KEYCLOAK_CLIENT_ID=socoles-frontend
+KEYCLOAK_CLIENT_SECRET=change-me
+KEYCLOAK_LOGOUT_REDIRECT_URI=http://localhost:3000/
+INSTRUCTOR_SIGNUP_CODE=choose-an-instructor-signup-code
 ```
+
+Do not use the university URL for a local installation. Use `http://localhost:3000` consistently in the browser; do not switch between `localhost` and `127.0.0.1` while signing in.
 
 For a custom HTTPS domain:
 ```bash
 POSTGRES_PASSWORD=your-strong-password
-SOCOLES_VERSION=1.1.5
+SOCOLES_VERSION=1.2.0
 CORS_ORIGINS=https://socoles.example.edu #comma-separated, no spaces
 NEXT_PUBLIC_SOCOLES_API_URL=https://socoles.example.edu #what the browser calls
 # Internal service URL usually stays as-is for Docker:
@@ -70,7 +84,32 @@ Notes:
 docker compose up -d
 ```
 
-Optional: build images locally instead of pulling prebuilt ones (uncomment the `build:` sections in `docker-compose.yml` first):
+Wait until the services are running, then verify their status:
+
+```bash
+docker compose ps
+```
+
+The `db`, `backend`, and `keycloak` services must be running before signing in. If Keycloak is restarting, inspect its startup error:
+
+```bash
+docker compose logs --tail=100 keycloak
+```
+
+For a fresh local installation where the database was initialized with an earlier configuration, reset the local Docker data and start again. This deletes all local application and Keycloak data:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+### 4. Sign in
+
+Open http://localhost:3000 and select a role. The local Keycloak realm has no predefined users. Select **Register** on the Keycloak login page to create a user.
+
+After signing in as an instructor, enter the `INSTRUCTOR_SIGNUP_CODE` from `.env` to provision the instructor account. Students need to be added to an instructor's course or roster before they can access student work.
+
+Optional: build images locally instead of pulling prebuilt ones:
 ```bash
 docker compose build
 docker compose up -d
