@@ -20,9 +20,10 @@ import InstructorReviewRequests from '@/features/instructor/InstructorReviewRequ
 import ClassRoster from '@/features/instructor/ClassRoster';
 import type { Role } from '@/lib/types';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m, roleLabel } from '@/i18n';
 
 
-const drawerWidth = 260;
+const drawerWidth = 300;
 type Item = { id: string; label: string; icon: React.ElementType };
 
 export default function AppShell() {
@@ -32,10 +33,10 @@ export default function AppShell() {
     const studentItems: Item[] = useMemo(
         () => role === 'student'
             ? [
-                { id: 's-dash', label: 'Dashboard', icon: DashboardIcon },
-                { id: 's-assignments', label: 'Assignments', icon: MenuBookIcon },
-                { id: 's-submissions', label: 'Submissions', icon: DescriptionIcon },
-                { id: 's-profile', label: 'Profile', icon: GroupIcon },
+                { id: 's-dash', label: m.nav.dashboard, icon: DashboardIcon },
+                { id: 's-assignments', label: m.nav.assignments, icon: MenuBookIcon },
+                { id: 's-submissions', label: m.nav.submissions, icon: DescriptionIcon },
+                { id: 's-profile', label: m.nav.profile, icon: GroupIcon },
             ]
             : [],
         [role]
@@ -43,9 +44,9 @@ export default function AppShell() {
     const taItems: Item[] = useMemo(
         () => (role === 'student' && user?.evaluator)
             ? [
-                { id: 'i-reviews', label: 'Reviews', icon: RateReviewIcon },
-                { id: 'i-submissions', label: 'Submissions', icon: DescriptionIcon },
-                { id: 'i-class', label: 'Roster', icon: GroupIcon },
+                { id: 'i-reviews', label: m.nav.reviews, icon: RateReviewIcon },
+                { id: 'i-submissions', label: m.nav.submissions, icon: DescriptionIcon },
+                { id: 'i-class', label: m.nav.roster, icon: GroupIcon },
             ]
             : [],
         [role, user?.evaluator]
@@ -53,15 +54,15 @@ export default function AppShell() {
     const instructorItems: Item[] = useMemo(
         () => role === 'instructor'
             ? [
-                { id: 'i-dash', label: 'Dashboard', icon: DashboardIcon },
-                { id: 'i-questions', label: 'Questions', icon: AssignmentIcon },
-                { id: 'i-assignments', label: 'Assignments', icon: MenuBookIcon },
-                { id: 'i-datasets', label: 'Datasets', icon: StorageIcon },
-                { id: 'i-batch', label: 'Batch Grader', icon: CloudUploadIcon },
-                { id: 'i-submissions', label: 'Submissions', icon: DescriptionIcon },
-                { id: 'i-reviews', label: 'Reviews', icon: RateReviewIcon },
-                { id: 'i-class', label: 'Class', icon: GroupIcon },
-                { id: 'i-settings', label: 'Settings', icon: SettingsIcon },
+                { id: 'i-dash', label: m.nav.dashboard, icon: DashboardIcon },
+                { id: 'i-questions', label: m.nav.questions, icon: AssignmentIcon },
+                { id: 'i-assignments', label: m.nav.assignments, icon: MenuBookIcon },
+                { id: 'i-datasets', label: m.nav.datasets, icon: StorageIcon },
+                { id: 'i-batch', label: m.nav.batch, icon: CloudUploadIcon },
+                { id: 'i-submissions', label: m.nav.submissions, icon: DescriptionIcon },
+                { id: 'i-reviews', label: m.nav.reviews, icon: RateReviewIcon },
+                { id: 'i-class', label: m.nav.class, icon: GroupIcon },
+                { id: 'i-settings', label: m.nav.settings, icon: SettingsIcon },
             ]
             : [],
         [role]
@@ -207,17 +208,18 @@ export default function AppShell() {
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
             <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1, background: 'linear-gradient(90deg,#ff66c4,#ffde59)', boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }}>
                 <Toolbar sx={{ gap: 2, minHeight: 60 }}>
-                    <Box component="img" src="/icons/student.gif" alt="Student" sx={{ height: 40, width: 'auto', display: 'block', borderRadius: 1, boxShadow: '0 0 0 2px rgba(255,255,255,0.25)' }} />
+                    <Box component="img" src="/icons/student.gif" alt={m.nav.studentAlt} sx={{ height: 40, width: 'auto', display: 'block', borderRadius: 1, boxShadow: '0 0 0 2px rgba(255,255,255,0.25)' }} />
                     <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600, letterSpacing: 0.25 }}>
-                        {courseName || 'Course'}
+                        {courseName || m.common.course}
                     </Typography>
-                    <IconButton color="inherit" onClick={handleSignOut} title="Sign out" sx={{ bgcolor: 'rgba(0,0,0,0.15)', '&:hover': { bgcolor: 'rgba(0,0,0,0.25)' } }}>
+                    <IconButton color="inherit" onClick={handleSignOut} title={m.common.signOut} aria-label={m.common.signOut} sx={{ bgcolor: 'rgba(0,0,0,0.15)', '&:hover': { bgcolor: 'rgba(0,0,0,0.25)' } }}>
                         <LogoutIcon />
                     </IconButton>
                     <IconButton
                         color="inherit"
                         onClick={(e) => setOverflowEl(e.currentTarget)}
-                        title="More"
+                        title={m.common.more}
+                        aria-label={m.common.more}
                         sx={{ bgcolor: 'rgba(0,0,0,0.15)', '&:hover': { bgcolor: 'rgba(0,0,0,0.25)' } }}
                     >
                         <MoreVertIcon />
@@ -231,7 +233,7 @@ export default function AppShell() {
                     >
                         {role === 'instructor' && (
                             <MenuItem onClick={() => void openChangeCourse()}>
-                                Change active course
+                                {m.shell.changeCourse}
                             </MenuItem>
                         )}
                     </Menu>
@@ -247,7 +249,7 @@ export default function AppShell() {
                                 <ListItemIcon sx={{ minWidth: 30 }}>
                                     {c.id === defaultCourseId ? <CheckIcon fontSize="small" /> : null}
                                 </ListItemIcon>
-                                {c.name || 'Untitled course'}
+                                {c.name || m.common.untitledCourse}
                             </MenuItem>
                         ))}
                     </Menu>
@@ -260,10 +262,10 @@ export default function AppShell() {
             }}>
                 <Toolbar />
                 <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box component="img" src="/icons/socoles-logo.svg" alt="SOCOLES Logo" sx={{ height: 40, width: 'auto', display: 'block' }} />
+                    <Box component="img" src="/icons/socoles-logo.svg" alt={m.brand.logoAlt} sx={{ height: 40, width: 'auto', display: 'block' }} />
                     <Box>
-                        <Typography fontWeight={600}>SOCOLES</Typography>
-                        <Typography variant="caption" color="text.secondary">Making grading easier</Typography>
+                        <Typography fontWeight={600}>{m.brand.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{m.brand.tagline}</Typography>
                     </Box>
                 </Box>
                 <Divider />
@@ -308,7 +310,7 @@ export default function AppShell() {
                                 <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'secondary.main' : 'text.secondary' }}>
                                     <it.icon fontSize='small' />
                                 </ListItemIcon>
-                                <ListItemText primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} primary={it.label} />
+                                <ListItemText primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, whiteSpace: 'normal', lineHeight: 1.25 }} primary={it.label} />
                                 {it.id === 'i-reviews' && pendingCount > 0 && (
                                     <Box component="span" sx={{ ml: 'auto', mr: .5 }}>
                                         <Chip size='small' color='warning' label={pendingCount > 99 ? '99+' : String(pendingCount)} sx={{ height: 20 }} />
@@ -318,8 +320,8 @@ export default function AppShell() {
                         );
                     })}
                     {role === 'student' && taItems.length > 0 && (
-                        <ListSubheader disableSticky sx={{ mt: 1, mb: 0.5, mx: 1.5, px: 0, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'text.secondary' }}>
-                            TA tools
+                        <ListSubheader disableSticky sx={{ mt: 1, mb: 0.5, mx: 1.5, px: 0, fontSize: 12, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'normal', color: 'text.secondary' }}>
+                            {m.nav.taTools}
                         </ListSubheader>
                     )}
                     {role === 'student' && taItems.map((it) => {
@@ -356,7 +358,7 @@ export default function AppShell() {
                                 <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'secondary.main' : 'text.secondary' }}>
                                     <it.icon fontSize='small' />
                                 </ListItemIcon>
-                                <ListItemText primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} primary={it.label} />
+                                <ListItemText primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, whiteSpace: 'normal', lineHeight: 1.25 }} primary={it.label} />
                                 {it.id === 'i-reviews' && pendingCount > 0 && (
                                     <Box component="span" sx={{ ml: 'auto', mr: .5 }}>
                                         <Chip size='small' color='warning' label={pendingCount > 99 ? '99+' : String(pendingCount)} sx={{ height: 20 }} />
@@ -367,10 +369,10 @@ export default function AppShell() {
                     })}
                 </List>
                 <Box sx={{ mt: 'auto', p: 2, display: 'flex', alignItems: 'center', gap: 1.25, opacity: 0.9 }}>
-                    <Avatar src={role === 'student' ? '/icons/reading-book.png' : '/icons/teacher.png'} alt={role === 'student' ? 'Student' : 'Instructor'} sx={{ width: 36, height: 36, bgcolor: 'secondary.main' }} />
+                    <Avatar src={role === 'student' ? '/icons/reading-book.png' : '/icons/teacher.png'} alt={role === 'student' ? m.nav.studentAlt : m.nav.instructorAlt} sx={{ width: 36, height: 36, bgcolor: 'secondary.main' }} />
                     <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" noWrap sx={{ maxWidth: 140, fontWeight: 600 }}>{user?.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{role === 'student' ? (user?.evaluator ? 'student • TA' : 'student') : 'instructor'}</Typography>
+                        <Typography variant="body2" sx={{ maxWidth: 180, fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.25, overflowWrap: 'anywhere' }}>{user?.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{roleLabel(role, user?.evaluator)}</Typography>
                     </Box>
                 </Box>
             </Drawer>

@@ -7,6 +7,7 @@ import Grid from '@mui/material/Grid';
 import Avatar from '@mui/material/Avatar';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import { m } from '@/i18n';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -35,7 +36,7 @@ export default function HomePage() {
         <Box sx={{ display: 'grid', placeItems: 'center', mb: 3 }}>
           <Logo height={56} variant="default" />
           <Typography variant="h5" sx={{ fontWeight: 700, mt: 1, color: '#191654' }}>SOCOLES</Typography>
-          <Typography variant="body2" color="text.secondary">Choose your role to sign in</Typography>
+          <Typography variant="body2" color="text.secondary">{m.home.chooseRole}</Typography>
         </Box>
 
         <Grid container spacing={2}>
@@ -70,13 +71,13 @@ export default function HomePage() {
                         px: 2,
                       }}
                     >
-                      I'm a Student
+                      {m.home.student}
                     </Box>
 
                     <CardContent sx={{ p: 3, display: 'grid', gap: 1, placeItems: 'center' }}>
-                      <Avatar src="/icons/reading-book.png" alt="Student" sx={{ width: 40, height: 40, bgcolor: 'secondary.main', mb: 1 }} />
+                      <Avatar src="/icons/reading-book.png" alt={m.home.studentAlt} sx={{ width: 40, height: 40, bgcolor: 'secondary.main', mb: 1 }} />
                       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                        Access your exercises, submit, and view feedback.
+                        {m.home.studentBlurb}
                       </Typography>
                     </CardContent>
                   </CardActionArea>
@@ -116,13 +117,13 @@ export default function HomePage() {
                         px: 2,
                       }}
                     >
-                      I'm an Instructor
+                      {m.home.instructor}
                     </Box>
 
                     <CardContent sx={{ p: 3, display: 'grid', gap: 1, placeItems: 'center' }}>
-                      <Avatar src="/icons/teacher.png" alt="Instructor" sx={{ width: 40, height: 40, bgcolor: 'primary.main', mb: 1 }} />
+                      <Avatar src="/icons/teacher.png" alt={m.home.instructorAlt} sx={{ width: 40, height: 40, bgcolor: 'primary.main', mb: 1 }} />
                       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                        Manage student submissions, grading, and reports.
+                        {m.home.instructorBlurb}
                       </Typography>
                     </CardContent>
                   </CardActionArea>

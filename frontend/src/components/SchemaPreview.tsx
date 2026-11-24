@@ -2,8 +2,9 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { extractSchema } from '@/lib/sqlSchema';
+import { m } from '@/i18n';
 
-export default function SchemaPreview({ sql, emptyText = 'No CREATE TABLE statements detected.' }: { sql: string; emptyText?: string }) {
+export default function SchemaPreview({ sql, emptyText = m.datasets.noCreate }: { sql: string; emptyText?: string }) {
     const schema = extractSchema(sql);
     if (!schema.length) return <Typography variant='caption' color='text.secondary'>{emptyText}</Typography>;
     return (

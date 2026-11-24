@@ -4,6 +4,7 @@ import { Box, Button, Card, CardContent, CardHeader, CircularProgress, FormContr
 import Logo from '@/components/Logo';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m, uiError } from '@/i18n';
 
 export default function StudentCallback() {
     const router = useRouter();
@@ -24,13 +25,13 @@ export default function StudentCallback() {
                     setLoading(false);
                     return;
                 }
-                if (!res.ok) throw new Error(data?.error || 'Login failed');
+                if (!res.ok) throw new Error(uiError(data?.error, m.errors.generic));
                 const { token, student } = data;
                 localStorage.setItem('sqlgrader.student', JSON.stringify({ token, email: student.email, id: student.id, name: student.name, instructorId: student.instructorId }));
                 setUser({ name: student.email, role: 'student', token, instructorId: student.instructorId });
                 router.replace('/');
             } catch (e: any) {
-                setError(e.message || 'SSO login failed');
+                setError(uiError(e, m.errors.generic));
                 setLoading(false);
             }
         })();
@@ -43,13 +44,13 @@ export default function StudentCallback() {
         try {
             const res = await fetch('/api/auth/student/login-exchange', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ instructorId: selectedInstructorId }) });
             const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Login failed');
+            if (!res.ok) throw new Error(uiError(data?.error, m.errors.generic));
             const { token, student } = data;
             localStorage.setItem('sqlgrader.student', JSON.stringify({ token, email: student.email, id: student.id, name: student.name, instructorId: student.instructorId }));
             setUser({ name: student.email, role: 'student', token, instructorId: student.instructorId });
             router.replace('/');
         } catch (e: any) {
-            setError(e.message || 'Login failed');
+            setError(uiError(e, m.errors.generic));
             setLoading(false);
         }
     };
@@ -101,8 +102,8 @@ export default function StudentCallback() {
                         }}>
                             <Box sx={{ display: 'grid', placeItems: 'center' }}>
                                 <Logo height={48} variant="default" />
-                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>Finalizing student sign in…</Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.9 }}>Please wait while we verify your session</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{m.auth.finalizingStudent}</Typography>
+                                <Typography variant="body2" sx={{ opacity: 0.9 }}>{m.auth.pleaseWait}</Typography>
                             </Box>
                         </Box>
                     }
@@ -118,14 +119,14 @@ export default function StudentCallback() {
                     {!loading && choices.length > 1 && (
                         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 1 }}>
                             <FormControl size="small">
-                                <InputLabel id="course-label">Course</InputLabel>
-                                <Select labelId="course-label" label="Course" value={selectedInstructorId} onChange={(e) => setSelectedInstructorId(String(e.target.value))}>
+                                <InputLabel id="course-label">{m.auth.course}</InputLabel>
+                                <Select labelId="course-label" label={m.auth.course} value={selectedInstructorId} onChange={(e) => setSelectedInstructorId(String(e.target.value))}>
                                     {choices.map((c) => (
                                         <MenuItem key={c.instructorId} value={c.instructorId}>{c.courseName || c.instructorId}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
-                            <Button variant="outlined" disabled={!selectedInstructorId} onClick={finishWithChoice}>Continue</Button>
+                            <Button variant="outlined" disabled={!selectedInstructorId} onClick={finishWithChoice}>{m.auth.continue}</Button>
                         </Box>
                     )}
 

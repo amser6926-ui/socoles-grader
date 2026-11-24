@@ -18,6 +18,7 @@ import FeedbackSurveyDialog from './FeedbackSurveyDialog';
 import StudentProfile from './StudentProfile';
 import StudentAssignmentPlayer from './StudentAssignmentPlayer';
 import StudentSubmissionReview from './StudentSubmissionReview';
+import { difficultyLabel, formatDue, m, ruWord } from '@/i18n';
 import { useAuth } from '@/features/auth/AuthProvider';
 import PageCard from '@/components/PageCard';
 import HeaderActions from '@/components/HeaderActions';
@@ -112,23 +113,23 @@ function AssignmentsGrid({
                                 <CardHeader
                                     title={<Typography variant="subtitle1">{a.title}</Typography>}
                                     subheader={<Typography variant="caption" color="text.secondary">{a.course}</Typography>}
-                                    action={<Chip size="small" label={a.difficulty} variant="outlined" />}
+                                    action={<Chip size="small" label={difficultyLabel(a.difficulty)} variant="outlined" />}
                                     sx={{ pb: 0.5 }}
                                 />
                                 <CardContent sx={{ pt: 1.5 }}>
                                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                                         {a.tags?.map((t) => <Chip key={t} size="small" label={t} variant="outlined" />)}
                                     </Box>
-                                    <Typography variant="body2" color="text.secondary">Due: {a.due}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{m.common.dueOn(formatDue(a.due))}</Typography>
                                 </CardContent>
                                 <CardActions sx={{ justifyContent: 'space-between' }}>
-                                    <Typography variant="body2"><b>{a.points}</b> pts</Typography>
+                                    <Typography variant="body2"><b>{a.points}</b> {m.student.pts}</Typography>
                                     {submittedTitles.has(a.title) ? (
-                                        <Button size="small" variant="outlined" startIcon={<VisibilityIcon />} onClick={() => openEditor(undefined, a.id)}>View</Button>
+                                        <Button size="small" variant="outlined" startIcon={<VisibilityIcon />} onClick={() => openEditor(undefined, a.id)}>{m.student.view}</Button>
                                     ) : inProgressTitles?.has(a.title) ? (
-                                        <Button size="small" variant="contained" onClick={() => openEditor(undefined, a.id)}>Continue</Button>
+                                        <Button size="small" variant="contained" onClick={() => openEditor(undefined, a.id)}>{m.student.continue}</Button>
                                     ) : (
-                                        <Button size="small" variant="contained" onClick={() => openEditor(`-- ${a.title}\nSELECT * FROM Book;`, a.id)}>Start</Button>
+                                        <Button size="small" variant="contained" onClick={() => openEditor(`-- ${a.title}\nSELECT * FROM Book;`, a.id)}>{m.student.start}</Button>
                                     )}
                                 </CardActions>
                             </Card>
@@ -399,20 +400,20 @@ export default function StudentArea({ active }: { active: string }) {
             {/* Dashboard */}
             {active === 's-dash' && (
                 <PageCard
-                    headerTitle='Dashboard'
+                    headerTitle={m.student.dashboard}
                     headerProps={{ height: 56 }}
-                    headerActions={<HeaderActions actions={[{ key: 'refresh-dash', label: 'Refresh', ariaLabel: 'Refresh data', icon: <RefreshIcon fontSize='small' />, onClick: () => { void loadData('manual'); } }]} />}
+                    headerActions={<HeaderActions actions={[{ key: 'refresh-dash', label: m.common.refresh, ariaLabel: m.student.refresh, icon: <RefreshIcon fontSize='small' />, onClick: () => { void loadData('manual'); } }]} />}
                     headerActionsVariant='plain'
                 >
                     <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { md: 'repeat(3,1fr)', xs: '1fr' } }}>
-                        <StatCard icon={AssignmentTurnedInIcon} label="Total assignments" value={assignments.length} tone="secondary" />
-                        <StatCard icon={TimerIcon} label="Nearest due" value={nearestDueDays} postfix="days" tone={nearestDueTone} />
-                        <StatCard icon={CheckCircleIcon} label="Finished" value={categorized.finished.length} />
+                        <StatCard icon={AssignmentTurnedInIcon} label={m.student.totalAssignments} value={assignments.length} tone="secondary" />
+                        <StatCard icon={TimerIcon} label={m.student.nearestDue} value={nearestDueDays} postfix={ruWord(nearestDueDays, 'день', 'дня', 'дней')} tone={nearestDueTone} />
+                        <StatCard icon={CheckCircleIcon} label={m.student.finished} value={categorized.finished.length} />
                     </Box>
 
                     {categorized.overdue.length > 0 && (
                         <Card sx={{ mt: 2, borderColor: 'error.main' }}>
-                            <CardHeader title={<Typography variant="subtitle1" sx={{ color: 'error.main' }}>Overdue</Typography>} subheader={<Typography variant="caption" color="text.secondary">Past the deadline and not finished.</Typography>} />
+                            <CardHeader title={<Typography variant="subtitle1" sx={{ color: 'error.main' }}>{m.student.overdue}</Typography>} subheader={<Typography variant="caption" color="text.secondary">{m.student.overdueHelp}</Typography>} />
                             <CardContent>
                                 <AssignmentsGrid openEditor={(seed, aId) => openFromDashboard(aId, seed)} assignments={categorized.overdue} submittedTitles={categorized.finishedTitles} inProgressTitles={categorized.inProgressTitles} />
                             </CardContent>
@@ -421,7 +422,7 @@ export default function StudentArea({ active }: { active: string }) {
 
                     {categorized.inProgress.length > 0 && (
                         <Card sx={{ mt: 2 }}>
-                            <CardHeader title={<Typography variant="subtitle1">In Progress</Typography>} subheader={<Typography variant="caption" color="text.secondary">Assignments you have started.</Typography>} />
+                            <CardHeader title={<Typography variant="subtitle1">{m.student.inProgress}</Typography>} subheader={<Typography variant="caption" color="text.secondary">{m.student.inProgressHelp}</Typography>} />
                             <CardContent>
                                 <AssignmentsGrid openEditor={(seed, aId) => openFromDashboard(aId, seed)} assignments={categorized.inProgress} submittedTitles={categorized.finishedTitles} inProgressTitles={categorized.inProgressTitles} />
                             </CardContent>
@@ -430,7 +431,7 @@ export default function StudentArea({ active }: { active: string }) {
 
                     {categorized.pending.length > 0 && (
                         <Card sx={{ mt: 2 }}>
-                            <CardHeader title={<Typography variant="subtitle1">Pending</Typography>} subheader={<Typography variant="caption" color="text.secondary">Not started yet.</Typography>} />
+                            <CardHeader title={<Typography variant="subtitle1">{m.student.pending}</Typography>} subheader={<Typography variant="caption" color="text.secondary">{m.student.pendingHelp}</Typography>} />
                             <CardContent>
                                 <AssignmentsGrid openEditor={(seed, aId) => openFromDashboard(aId, seed)} assignments={categorized.pending} submittedTitles={categorized.finishedTitles} inProgressTitles={categorized.inProgressTitles} />
                             </CardContent>
@@ -439,7 +440,7 @@ export default function StudentArea({ active }: { active: string }) {
 
                     {categorized.finished.length > 0 && (
                         <Card sx={{ mt: 2 }}>
-                            <CardHeader title={<Typography variant="subtitle1">Finished</Typography>} subheader={<Typography variant="caption" color="text.secondary">Submitted or auto-graded.</Typography>} />
+                            <CardHeader title={<Typography variant="subtitle1">{m.student.finishedCard}</Typography>} subheader={<Typography variant="caption" color="text.secondary">{m.student.finishedHelp}</Typography>} />
                             <CardContent>
                                 <AssignmentsGrid openEditor={(seed, aId) => openFromDashboard(aId, seed)} assignments={categorized.finished} submittedTitles={categorized.finishedTitles} inProgressTitles={categorized.inProgressTitles} />
                             </CardContent>
@@ -451,9 +452,9 @@ export default function StudentArea({ active }: { active: string }) {
             {/* Assignments */}
             {active === 's-assignments' && (
                 <PageCard
-                    headerTitle='Assignments'
+                    headerTitle={m.student.assignments}
                     headerProps={{ height: 56 }}
-                    headerActions={<HeaderActions actions={[{ key: 'refresh-assign', label: 'Refresh', ariaLabel: 'Refresh assignments', icon: <RefreshIcon fontSize='small' />, onClick: () => { void loadData('manual'); } }]} />}
+                    headerActions={<HeaderActions actions={[{ key: 'refresh-assign', label: m.common.refresh, ariaLabel: m.student.refreshAssignments, icon: <RefreshIcon fontSize='small' />, onClick: () => { void loadData('manual'); } }]} />}
                     headerActionsVariant='plain'
                 >
                     {playerAssignmentId ? (
@@ -478,9 +479,9 @@ export default function StudentArea({ active }: { active: string }) {
             {/* Submissions */}
             {active === 's-submissions' && (
                 <PageCard
-                    headerTitle='Your Submissions'
+                    headerTitle={m.student.submissions}
                     headerProps={{ height: 56 }}
-                    headerActions={<HeaderActions actions={[{ key: 'refresh-subs', label: 'Refresh', ariaLabel: 'Refresh submissions', icon: <RefreshIcon fontSize='small' />, onClick: () => { void loadData('manual'); } }]} />}
+                    headerActions={<HeaderActions actions={[{ key: 'refresh-subs', label: m.common.refresh, ariaLabel: m.student.refreshSubmissions, icon: <RefreshIcon fontSize='small' />, onClick: () => { void loadData('manual'); } }]} />}
                     headerActionsVariant='plain'
                 >
                     {playerAssignmentId ? (
@@ -515,7 +516,7 @@ export default function StudentArea({ active }: { active: string }) {
             {/* Profile */}
             {active === 's-profile' && (
                 <PageCard
-                    headerTitle='Profile & Preferences'
+                    headerTitle={m.student.profile}
                     headerProps={{ height: 56 }}
                     headerActions={<HeaderActions actions={[]} />}
                     headerActionsVariant='plain'
@@ -526,7 +527,7 @@ export default function StudentArea({ active }: { active: string }) {
 
             {/* Fallback */}
             {!['s-dash', 's-assignments', 's-submissions', 's-profile'].includes(active) && (
-                <Typography variant="body2" color="text.secondary">Select an item from the sidebar.</Typography>
+                <Typography variant="body2" color="text.secondary">{m.student.pickSidebar}</Typography>
             )}
 
             {/* Editor dialog lives here so it can be opened from any page */}

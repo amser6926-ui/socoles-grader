@@ -1,9 +1,10 @@
 'use client';
 import { Table, TableBody, TableCell, TableHead, TableRow, Typography, TableContainer, Paper, Box } from '@mui/material';
+import { csvHeaderLabel, displayFeedback, formatNumber, m } from '@/i18n';
 
 
 export default function ResultsTable({ rows = [] as any[] }) {
-    if (!rows.length) return <Typography color="text.secondary">No results yet.</Typography>;
+    if (!rows.length) return <Typography color="text.secondary">{m.results.none}</Typography>;
 
     // Collect all headers across rows (in case rows have varying keys)
     const keySet = new Set<string>();
@@ -37,7 +38,7 @@ export default function ResultsTable({ rows = [] as any[] }) {
                 <Box component="ul" sx={{ pl: 2, m: 0 }}>
                     {val.map((v: any, i: number) => (
                         <Box key={i} component="li" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-                            {String(v)}
+                            {displayFeedback(String(v))}
                         </Box>
                     ))}
                 </Box>
@@ -46,7 +47,7 @@ export default function ResultsTable({ rows = [] as any[] }) {
         if (typeof val === 'object' && val !== null) {
             return <Box sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{JSON.stringify(val, null, 2)}</Box>;
         }
-        return <Box sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{String(val ?? '')}</Box>;
+        return <Box sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{displayFeedback(String(val ?? ''))}</Box>;
     };
 
     const formatCell = (header: string, value: unknown) => {
@@ -54,7 +55,7 @@ export default function ResultsTable({ rows = [] as any[] }) {
         // Grade-like numeric columns to two decimals
         const gradeHeaders = new Set(['score', 'grade', 'percent', 'percentage']);
         if (gradeHeaders.has(String(header).toLowerCase()) && typeof value === 'number' && isFinite(value)) {
-            return String(value.toFixed(2));
+            return formatNumber(value, 2);
         }
         return String(value ?? '');
     };
@@ -65,7 +66,7 @@ export default function ResultsTable({ rows = [] as any[] }) {
                 <TableHead>
                     <TableRow>
                         {ordered.map((h) => (
-                            <TableCell key={h} sx={{ fontWeight: 600 }}>{h}</TableCell>
+                            <TableCell key={h} sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{csvHeaderLabel(h)}</TableCell>
                         ))}
                     </TableRow>
                 </TableHead>

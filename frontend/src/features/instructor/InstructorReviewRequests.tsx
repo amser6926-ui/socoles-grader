@@ -11,6 +11,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InstructorSubmissionPlayer from '@/features/instructor/InstructorSubmissionPlayer';
+import { m as ru, statusLabel, formatDateTimeDDMMYYYYHHmm } from '@/i18n';
 
 interface ReviewReq { id: string; assignmentId: string; questionId: string; submissionId: string; student: string; comment: string; status: string; createdAt: string; updatedAt: string; instructorReply?: string | null; replyAt?: string | null; }
 interface AssignmentLite { id: string; title: string; }
@@ -168,35 +169,35 @@ export default function InstructorReviewRequests() {
 
     const headerActions = activeRequest ? (
         <HeaderActions actions={[
-            { key: 'back', label: 'Back', ariaLabel: 'Back to requests', onClick: () => { setActiveRequest(null); setActiveSubmission(null); }, icon: <ArrowBackIcon fontSize='small' /> }
+            { key: 'back', label: ru.reviews.back, ariaLabel: ru.reviews.backTip, onClick: () => { setActiveRequest(null); setActiveSubmission(null); }, icon: <ArrowBackIcon fontSize='small' /> }
         ]} />
     ) : (
         <HeaderActions actions={[
-            { key: 'refresh', label: 'Refresh', ariaLabel: 'Refresh', onClick: () => load(), icon: <RefreshIcon fontSize='small' /> }
+            { key: 'refresh', label: ru.reviews.refresh, ariaLabel: ru.reviews.refresh, onClick: () => load(), icon: <RefreshIcon fontSize='small' /> }
         ]} />
     );
 
     return (
-        <PageCard headerTitle={activeRequest ? 'Review Request Viewer' : `Review Requests (${filtered.length}${filterStatus ? ' • ' + filterStatus : ''})`} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain'>
+        <PageCard headerTitle={activeRequest ? ru.reviews.viewer : ru.reviews.list(filtered.length, filterStatus ? statusLabel(filterStatus) : '')} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain'>
             <CardContent sx={{ display: 'grid', gap: 2 }}>
                 {!activeRequest && (
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <FormControl size='small' sx={{ minWidth: 180 }}>
+                            <InputLabel sx={{ whiteSpace: 'normal' }}>{ru.reviews.assignment}</InputLabel>
+                            <Select label={ru.reviews.assignment} value={filterAssignment} onChange={e => setFilterAssignment(e.target.value)}>
+                                <MenuItem value=''><em>{ru.reviews.all}</em></MenuItem>
+                                {assignments.map(a => <MenuItem key={a.id} value={a.id} sx={{ whiteSpace: 'normal' }}>{a.title}</MenuItem>)}
+                            </Select>
+                        </FormControl>
                         <FormControl size='small' sx={{ minWidth: 160 }}>
-                            <InputLabel>Assignment</InputLabel>
-                            <Select label='Assignment' value={filterAssignment} onChange={e => setFilterAssignment(e.target.value)}>
-                                <MenuItem value=''><em>All</em></MenuItem>
-                                {assignments.map(a => <MenuItem key={a.id} value={a.id}>{a.title}</MenuItem>)}
+                            <InputLabel>{ru.reviews.status}</InputLabel>
+                            <Select label={ru.reviews.status} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                                <MenuItem value=''><em>{ru.reviews.all}</em></MenuItem>
+                                <MenuItem value='Pending'>{statusLabel('Pending')}</MenuItem>
+                                <MenuItem value='Resolved'>{statusLabel('Resolved')}</MenuItem>
                             </Select>
                         </FormControl>
-                        <FormControl size='small' sx={{ minWidth: 140 }}>
-                            <InputLabel>Status</InputLabel>
-                            <Select label='Status' value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                                <MenuItem value=''><em>All</em></MenuItem>
-                                <MenuItem value='Pending'>Pending</MenuItem>
-                                <MenuItem value='Resolved'>Resolved</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <TextField size='small' placeholder='Search comment or student' value={search} onChange={e => setSearch(e.target.value)} />
+                        <TextField size='small' placeholder={ru.reviews.search} value={search} onChange={e => setSearch(e.target.value)} sx={{ minWidth: { xs: '100%', sm: 240 }, flex: '1 1 220px' }} />
                     </Box>
                 )}
                 {!activeRequest && (
@@ -204,60 +205,60 @@ export default function InstructorReviewRequests() {
                         {filtered.map(r => (
                             <Card key={r.id} variant='outlined' sx={{ p: 1.25, display: 'grid', gap: .5 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
-                                    <Typography variant='subtitle2' sx={{ fontWeight: 600 }}>{assignmentTitle(r.assignmentId)}</Typography>
-                                    <Chip size='small' color={r.status === 'Pending' ? 'warning' : r.status === 'Resolved' ? 'success' : 'default'} label={r.status} />
+                                    <Typography variant='subtitle2' sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{assignmentTitle(r.assignmentId)}</Typography>
+                                    <Chip size='small' color={r.status === 'Pending' ? 'warning' : r.status === 'Resolved' ? 'success' : 'default'} label={statusLabel(r.status)} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
                                 </Box>
-                                <Typography variant='caption' color='text.secondary'>{questionTitle(r.questionId)}</Typography>
+                                <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{questionTitle(r.questionId)}</Typography>
                                 <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>{r.comment}</Typography>
-                                <Typography variant='caption' color='text.secondary'>Student: {r.student} • Submitted: {new Date(r.createdAt).toLocaleString()}</Typography>
+                                <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{`${ru.reviews.studentLine(r.student)} · ${ru.reviews.submitted(formatDateTimeDDMMYYYYHHmm(r.createdAt))}`}</Typography>
                                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                    {r.status === 'Pending' && <Button size='small' variant='contained' color='success' startIcon={<CheckCircleIcon fontSize='inherit' />} onClick={() => updateStatus(r.id, 'Resolved')}>Resolve</Button>}
-                                    {r.status === 'Resolved' && <Button size='small' variant='outlined' color='error' startIcon={<CloseIcon fontSize='inherit' />} onClick={() => updateStatus(r.id, 'Pending')}>Reopen</Button>}
-                                    <Tooltip title='Open submission viewer'>
-                                        <Button size='small' variant='text' startIcon={<VisibilityIcon fontSize='inherit' />} onClick={() => openRequest(r)}>View</Button>
+                                    {r.status === 'Pending' && <Button size='small' variant='contained' color='success' startIcon={<CheckCircleIcon fontSize='inherit' />} onClick={() => updateStatus(r.id, 'Resolved')} sx={{ whiteSpace: 'normal' }}>{ru.reviews.resolve}</Button>}
+                                    {r.status === 'Resolved' && <Button size='small' variant='outlined' color='error' startIcon={<CloseIcon fontSize='inherit' />} onClick={() => updateStatus(r.id, 'Pending')} sx={{ whiteSpace: 'normal' }}>{ru.reviews.reopen}</Button>}
+                                    <Tooltip title={ru.reviews.viewTip}>
+                                        <Button size='small' variant='text' startIcon={<VisibilityIcon fontSize='inherit' />} onClick={() => openRequest(r)}>{ru.reviews.view}</Button>
                                     </Tooltip>
                                 </Box>
                             </Card>
                         ))}
                         {!filtered.length && !loading && (
-                            <Typography variant='body2' color='text.secondary'>No requests.</Typography>
+                            <Typography variant='body2' color='text.secondary'>{ru.reviews.none}</Typography>
                         )}
                         {loading && (
-                            <Typography variant='body2' color='text.secondary'>Loading…</Typography>
+                            <Typography variant='body2' color='text.secondary'>{ru.reviews.loading}</Typography>
                         )}
                     </Box>
                 )}
                 {activeRequest && (
                     <Box sx={{ display: 'grid', gap: 2 }}>
                         <Card variant='outlined' sx={{ p: 1.25, display: 'grid', gap: .75 }}>
-                            <Typography variant='subtitle2'>{assignmentTitle(activeRequest.assignmentId)}</Typography>
-                            <Typography variant='caption' color='text.secondary'>{questionTitle(activeRequest.questionId)}</Typography>
+                            <Typography variant='subtitle2' sx={{ whiteSpace: 'normal' }}>{assignmentTitle(activeRequest.assignmentId)}</Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{questionTitle(activeRequest.questionId)}</Typography>
                             <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>{activeRequest.comment}</Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {activeRequest.status === 'Pending' && <Button size='small' variant='contained' color='success' onClick={() => updateStatus(activeRequest.id, 'Resolved')}>Resolve</Button>}
-                                {activeRequest.status === 'Resolved' && <Button size='small' variant='outlined' color='error' onClick={() => updateStatus(activeRequest.id, 'Pending')}>Reopen</Button>}
+                                {activeRequest.status === 'Pending' && <Button size='small' variant='contained' color='success' onClick={() => updateStatus(activeRequest.id, 'Resolved')} sx={{ whiteSpace: 'normal' }}>{ru.reviews.resolve}</Button>}
+                                {activeRequest.status === 'Resolved' && <Button size='small' variant='outlined' color='error' onClick={() => updateStatus(activeRequest.id, 'Pending')} sx={{ whiteSpace: 'normal' }}>{ru.reviews.reopen}</Button>}
                             </Box>
                             <Divider sx={{ my: 1 }} />
-                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600 }}>Thread</Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600 }}>{ru.reviews.thread}</Typography>
                             <Box sx={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: .75, mt: .5, pr: .5 }}>
                                 {messages.map(m => (
                                     <Box key={m.id} sx={{ alignSelf: m.senderRole === 'instructor' ? 'flex-end' : 'flex-start', maxWidth: '80%', p: .75, borderRadius: 1, bgcolor: m.senderRole === 'instructor' ? 'secondary.light' : 'grey.100', border: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant='caption' sx={{ display: 'block', fontWeight: 600 }}>
-                                            {m.senderRole === 'instructor' ? 'Instructor' : 'Student'}{m.sender ? ` • ${m.sender}` : ''}
+                                        <Typography variant='caption' sx={{ display: 'block', fontWeight: 600, whiteSpace: 'normal' }}>
+                                            {m.senderRole === 'instructor' ? ru.reviews.instructor : ru.reviews.student}{m.sender ? ` · ${m.sender}` : ''}
                                         </Typography>
                                         <Typography variant='caption' sx={{ display: 'block', whiteSpace: 'pre-wrap' }}>{m.message}</Typography>
                                     </Box>
                                 ))}
-                                {!messages.length && <Typography variant='caption' color='text.secondary'>No messages yet.</Typography>}
+                                {!messages.length && <Typography variant='caption' color='text.secondary'>{ru.reviews.noMessages}</Typography>}
                             </Box>
                             {activeRequest.status === 'Pending' && (
                                 <Box sx={{ mt: 1, display: 'grid', gap: .75 }}>
-                                    <TextField multiline minRows={2} size='small' placeholder='Type a reply...' value={msgDraft} onChange={e => setMsgDraft(e.target.value)} />
-                                    <Button size='small' variant='outlined' disabled={sendingMsg || !msgDraft.trim()} onClick={sendMessage}>{sendingMsg ? 'Sending…' : 'Send Message'}</Button>
+                                    <TextField multiline minRows={2} size='small' placeholder={ru.reviews.reply} value={msgDraft} onChange={e => setMsgDraft(e.target.value)} />
+                                    <Button size='small' variant='outlined' disabled={sendingMsg || !msgDraft.trim()} onClick={sendMessage} sx={{ whiteSpace: 'normal', justifyContent: 'flex-start' }}>{sendingMsg ? ru.reviews.sending : ru.reviews.send}</Button>
                                 </Box>
                             )}
                         </Card>
-                        {fetchingSubmission && <Typography variant='body2' color='text.secondary'>Loading submission…</Typography>}
+                        {fetchingSubmission && <Typography variant='body2' color='text.secondary'>{ru.reviews.loadingSubmission}</Typography>}
                         {activeSubmission && (
                             <InstructorSubmissionPlayer
                                 assignmentId={activeRequest.assignmentId}
@@ -268,23 +269,23 @@ export default function InstructorReviewRequests() {
                         )}
                         {activeSubmission && (
                             <Card variant='outlined' sx={{ p: 1.25, display: 'grid', gap: .75 }}>
-                                <Typography variant='subtitle2'>Manual Regrade</Typography>
-                                <Typography variant='caption' color='text.secondary'>Enter a new grade and optional feedback lines (one per line). This will create a manual attempt.</Typography>
+                                <Typography variant='subtitle2' sx={{ whiteSpace: 'normal' }}>{ru.reviews.manual}</Typography>
+                                <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.reviews.manualHelp}</Typography>
                                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                    <TextField label='Grade' size='small' value={manualGrade} onChange={e => setManualGrade(e.target.value)} sx={{ width: 120 }} />
+                                    <TextField label={ru.reviews.grade} size='small' value={manualGrade} onChange={e => setManualGrade(e.target.value)} sx={{ width: 140 }} />
                                 </Box>
-                                <TextField multiline minRows={3} size='small' label='Feedback (one line per item)' value={manualFeedback} onChange={e => setManualFeedback(e.target.value)} />
+                                <TextField multiline minRows={3} size='small' label={ru.reviews.feedbackLines} value={manualFeedback} onChange={e => setManualFeedback(e.target.value)} sx={{ '& .MuiInputLabel-root': { whiteSpace: 'normal' } }} />
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                    <Button size='small' variant='contained' disabled={savingManual || saveSuccess} onClick={saveManualRegrade} startIcon={saveSuccess ? <DoneIcon fontSize='inherit' /> : undefined}>
-                                        {savingManual ? 'Saving...' : saveSuccess ? 'Saved' : 'Save Manual Regrade'}
+                                    <Button size='small' variant='contained' disabled={savingManual || saveSuccess} onClick={saveManualRegrade} startIcon={saveSuccess ? <DoneIcon fontSize='inherit' /> : undefined} sx={{ whiteSpace: 'normal' }}>
+                                        {savingManual ? ru.reviews.saving : saveSuccess ? ru.reviews.saved : ru.reviews.saveManual}
                                     </Button>
                                     {saveSuccess && (
-                                        <Typography variant='caption' color='success.main'>Manual regrade saved.</Typography>
+                                        <Typography variant='caption' color='success.main' sx={{ whiteSpace: 'normal' }}>{ru.reviews.savedNote}</Typography>
                                     )}
                                 </Box>
                             </Card>
                         )}
-                        {!fetchingSubmission && !activeSubmission && <Typography variant='caption' color='text.secondary'>Submission not found.</Typography>}
+                        {!fetchingSubmission && !activeSubmission && <Typography variant='caption' color='text.secondary'>{ru.reviews.notFound}</Typography>}
                     </Box>
                 )}
             </CardContent>

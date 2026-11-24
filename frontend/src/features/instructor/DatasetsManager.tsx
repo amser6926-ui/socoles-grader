@@ -26,6 +26,7 @@ import HeaderActions from '@/components/HeaderActions';
 import TilesGrid from '@/components/TilesGrid';
 import PageCard from '@/components/PageCard';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m as ru, uiError } from '@/i18n';
 
 export default function DatasetsManager() {
     const { authFetch, user } = useAuth();
@@ -49,7 +50,7 @@ export default function DatasetsManager() {
             const res = await authFetch('/api/datasets');
             const data = await res.json();
             setDatasets(Array.isArray(data) ? data : []);
-        } catch (e: any) { setError(e.message || 'Failed to load datasets'); } finally { setLoading(false); }
+        } catch (e: any) { setError(uiError(e, ru.errors.loadDatasets)); } finally { setLoading(false); }
     }
 
     useEffect(() => { if (user?.token) void load(); }, [user?.token]);
@@ -66,9 +67,9 @@ export default function DatasetsManager() {
             setDraftName(base);
             setDraftSql(text);
             setDlgOpen(true);
-            setNote(`Imported ${file.name}`);
+            setNote(ru.datasets.imported(file.name));
         } catch (e: any) {
-            setError(e?.message || 'Failed to read SQL file');
+            setError(uiError(e, ru.datasets.readFailed));
         }
     }
     function triggerImport() { importInputRef.current?.click(); }
@@ -129,30 +130,30 @@ export default function DatasetsManager() {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data?.error || 'Update failed');
                 setDatasets(list => list.map(d => d.id === editingId ? data : d));
-                setNote('Dataset updated');
+                setNote(ru.datasets.updated);
             } else {
                 const res = await authFetch('/api/datasets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: draftName.trim(), sql: draftSql }) });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data?.error || 'Create failed');
                 setDatasets(list => [...list, data]);
-                setNote('Dataset created');
+                setNote(ru.datasets.created);
             }
             setDlgOpen(false);
         } catch (e: any) {
-            setError(e.message || 'Save failed');
+            setError(uiError(e, ru.errors.saveDataset));
         } finally { setSaving(false); }
     }
 
     async function del(id: string) {
-        if (!confirm('Delete this dataset?')) return;
+        if (!confirm(ru.datasets.deleteConfirm)) return;
         setDeletingId(id);
         try {
             const res = await authFetch(`/api/datasets?id=${id}`, { method: 'DELETE' });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data?.error || 'Delete failed');
             setDatasets(list => list.filter(d => d.id !== id));
-            setNote('Dataset deleted');
-        } catch (e: any) { setError(e.message || 'Delete failed'); } finally { setDeletingId(null); }
+            setNote(ru.datasets.deleted);
+        } catch (e: any) { setError(uiError(e, ru.errors.deleteDataset)); } finally { setDeletingId(null); }
     }
 
     // tile menu state
@@ -167,9 +168,9 @@ export default function DatasetsManager() {
         <>
             <HeaderActions
                 actions={[
-                    { key: 'new', ariaLabel: 'New dataset', title: 'New dataset', icon: <AddIcon fontSize='small' />, onClick: openCreate },
-                    { key: 'import', ariaLabel: 'Import .sql', title: 'Import .sql', icon: <UploadFileIcon fontSize='small' />, onClick: triggerImport },
-                    { key: 'reload', ariaLabel: 'Reload', title: 'Reload datasets', icon: <RefreshIcon fontSize='small' />, onClick: () => load(), disabled: loading }
+                    { key: 'new', ariaLabel: ru.datasets.new, title: ru.datasets.new, icon: <AddIcon fontSize='small' />, onClick: openCreate },
+                    { key: 'import', ariaLabel: ru.datasets.import, title: ru.datasets.import, icon: <UploadFileIcon fontSize='small' />, onClick: triggerImport },
+                    { key: 'reload', ariaLabel: ru.datasets.reload, title: ru.datasets.reloadTip, icon: <RefreshIcon fontSize='small' />, onClick: () => load(), disabled: loading }
                 ]}
             />
             <input ref={importInputRef} hidden type='file' accept='.sql' onChange={onFileChange} />
@@ -177,12 +178,12 @@ export default function DatasetsManager() {
     );
 
     return (
-        <PageCard headerTitle='Datasets' headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain' loadingProgress={loading}>
+        <PageCard headerTitle={ru.datasets.title} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain' loadingProgress={loading}>
             <Box sx={{ p: { xs: 1.5, md: 2 } }}>
                 {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
                 <Box sx={{ display: 'grid', gap: 1.25 }}>
                     {!datasets.length && !loading && (
-                        <Typography variant="body2" color="text.secondary">No datasets yet.</Typography>
+                        <Typography variant="body2" color="text.secondary">{ru.datasets.empty}</Typography>
                     )}
                     <TilesGrid>
                         {datasets.map(ds => {
@@ -220,17 +221,17 @@ export default function DatasetsManager() {
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography variant='subtitle2' sx={{ fontWeight: 600, lineHeight: 1.2, pr: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{ds.name}</Typography>
-                                            <Typography variant='caption' color='text.secondary'>SQL length: {ds.sql?.length || 0} chars</Typography>
+                                            <Typography variant='subtitle2' sx={{ fontWeight: 600, lineHeight: 1.25, pr: 1, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{ds.name}</Typography>
+                                            <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.datasets.sqlLength(ds.sql?.length || 0)}</Typography>
                                         </Box>
-                                        <IconButton size='small' onClick={(e) => handleMenuOpen(e, ds.id)} aria-label={`Actions for ${ds.name}`}>
+                                        <IconButton size='small' onClick={(e) => handleMenuOpen(e, ds.id)} aria-label={ru.datasets.actionsFor(ds.name)}>
                                             <MoreVertIcon fontSize='small' />
                                         </IconButton>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, flexWrap: 'wrap' }}>
-                                        <Chip size='small' label={`${tables} table${tables !== 1 ? 's' : ''}`} variant='outlined' />
-                                        <Chip size='small' label={`${columns} col`} variant='outlined' />
-                                        <Chip size='small' label={`${(ds.sql?.length || 0)} chars`} />
+                                        <Chip size='small' label={ru.datasets.tables(tables)} variant='outlined' sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+                                        <Chip size='small' label={ru.datasets.cols(columns)} variant='outlined' sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+                                        <Chip size='small' label={ru.datasets.chars(ds.sql?.length || 0)} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
                                     </Box>
                                     <Box sx={{ display: 'grid', gap: .5, maxHeight: 160, overflowY: 'auto', pr: 0.5 }}>
                                         {schema.length ? schema.map(t => (
@@ -244,7 +245,7 @@ export default function DatasetsManager() {
                                                 )
                                             </Typography>
                                         )) : (
-                                            <Typography variant='caption' color='text.secondary'>No CREATE TABLE statements detected.</Typography>
+                                            <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.datasets.noCreate}</Typography>
                                         )}
                                     </Box>
                                 </Box>
@@ -252,26 +253,26 @@ export default function DatasetsManager() {
                         })}
                     </TilesGrid>
                     <Menu anchorEl={menuAnchor} open={openMenu} onClose={handleMenuClose} keepMounted>
-                        <MenuItem onClick={() => { triggerMenu(id => { const ds = datasets.find(d => d.id === id); if (ds) openEdit(ds); }); }}><EditIcon fontSize='small' style={{ marginRight: 8 }} /> Edit</MenuItem>
-                        <MenuItem onClick={() => { triggerMenu(id => del(id)); }}>
+                        <MenuItem sx={{ whiteSpace: 'normal' }} onClick={() => { triggerMenu(id => { const ds = datasets.find(d => d.id === id); if (ds) openEdit(ds); }); }}><EditIcon fontSize='small' style={{ marginRight: 8 }} /> {ru.datasets.edit}</MenuItem>
+                        <MenuItem sx={{ whiteSpace: 'normal' }} onClick={() => { triggerMenu(id => del(id)); }}>
                             <DeleteIcon fontSize='small' color='error' style={{ marginRight: 8 }} />
-                            <Typography variant='body2' color='error.main'>Delete</Typography>
+                            <Typography variant='body2' color='error.main'>{ru.datasets.delete}</Typography>
                         </MenuItem>
                     </Menu>
                 </Box>
             </Box>
 
             <Dialog open={dlgOpen} onClose={closeDlg} fullWidth maxWidth='md'>
-                <DialogTitle>{editingId ? 'Edit dataset' : 'New dataset'}</DialogTitle>
+                <DialogTitle sx={{ whiteSpace: 'normal' }}>{editingId ? ru.datasets.editTitle : ru.datasets.newTitle}</DialogTitle>
                 <DialogContent dividers>
                     <Box sx={{ display: 'grid', gap: 1.5 }}>
-                        <TextField label='Name' value={draftName} onChange={e => setDraftName(e.target.value)} size='small' />
-                        <TextField label='Init SQL' value={draftSql} onChange={e => setDraftSql(e.target.value)} multiline minRows={10} InputProps={{ sx: { fontFamily: 'ui-monospace,monospace' } }} />
+                        <TextField label={ru.datasets.name} value={draftName} onChange={e => setDraftName(e.target.value)} size='small' />
+                        <TextField label={ru.datasets.initSql} value={draftSql} onChange={e => setDraftSql(e.target.value)} multiline minRows={10} InputProps={{ sx: { fontFamily: 'ui-monospace,monospace' } }} />
                     </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={closeDlg}>Cancel</Button>
-                    <Button variant='contained' onClick={save} disabled={saving || !draftName.trim() || !draftSql.trim()}>{saving ? 'Saving…' : 'Save'}</Button>
+                <DialogActions sx={{ flexWrap: 'wrap' }}>
+                    <Button onClick={closeDlg} sx={{ whiteSpace: 'normal' }}>{ru.common.cancel}</Button>
+                    <Button variant='contained' onClick={save} disabled={saving || !draftName.trim() || !draftSql.trim()} sx={{ whiteSpace: 'normal' }}>{saving ? ru.common.saving : ru.common.save}</Button>
                 </DialogActions>
             </Dialog>
 

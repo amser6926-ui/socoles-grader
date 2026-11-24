@@ -13,6 +13,7 @@ import PageCard from '@/components/PageCard';
 import HeaderActions from '@/components/HeaderActions';
 import { useAuth } from '@/features/auth/AuthProvider';
 import type { RosterEntry, InviteResponse, Assignment, Submission } from '@/lib/types';
+import { m as ru, uiError, statusLabel, formatDateTimeDDMMYYYYHHmm, formatNumber } from '@/i18n';
 
 export default function ClassRoster() {
     const { authFetch, user } = useAuth();
@@ -67,7 +68,7 @@ export default function ClassRoster() {
                     // Non-fatal; just skip marking expiry
                 }
             }
-        } catch (e: any) { setErr(e.message || 'Failed to load'); } finally { setBusy(false); }
+        } catch (e: any) { setErr(uiError(e, ru.errors.loadRoster)); } finally { setBusy(false); }
     }
     // Initial load
     useEffect(() => { load(); }, []);
@@ -99,28 +100,28 @@ export default function ClassRoster() {
     }, []);
 
     async function addOne() {
-        if (!name.trim() || !email.trim()) { setErr('Name and email required'); return; }
+        if (!name.trim() || !email.trim()) { setErr(ru.roster.nameEmailRequired); return; }
         // Prevent adding duplicate emails (case-insensitive)
         const emailNorm = email.trim().toLowerCase();
         // Ignore Removed entries when checking duplicates; re-add will revive them
         const exists = rows.some(r => r.status !== 'Removed' && (r.email || '').toLowerCase() === emailNorm);
-        if (exists) { setErr('Email already exists'); return; }
+        if (exists) { setErr(ru.roster.emailExists); return; }
         try {
             setBusy(true);
             // New manual additions start as Pending; they become Invited only after creating an invite
             const res = await authFetch('/api/roster', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), email: email.trim(), status: 'Pending' }) });
             const data = await res.json();
             if (Array.isArray(data) && data.length) setRows((r) => [...data, ...r]); else if (data?.id) setRows((r) => [data, ...r]);
-            setName(''); setEmail(''); setNote('Added');
-        } catch (e: any) { setErr(e.message || 'Add failed'); } finally { setBusy(false); }
+            setName(''); setEmail(''); setNote(ru.roster.added);
+        } catch (e: any) { setErr(uiError(e, ru.errors.addRoster)); } finally { setBusy(false); }
     }
 
     async function remove(id: string) {
         try {
             setBusy(true);
             const res = await authFetch(`/api/roster?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-            if (res.ok) setRows((r) => r.filter((x) => x.id !== id)); else setErr('Delete failed');
-        } catch (e: any) { setErr(e.message || 'Delete failed'); } finally { setBusy(false); }
+            if (res.ok) setRows((r) => r.filter((x) => x.id !== id)); else setErr(uiError('Delete failed', ru.errors.deleteRoster));
+        } catch (e: any) { setErr(uiError(e, ru.errors.deleteRoster)); } finally { setBusy(false); }
     }
 
     async function onCsv(evt: React.ChangeEvent<HTMLInputElement>) {
@@ -136,7 +137,7 @@ export default function ClassRoster() {
                     const parsed = (results.data || [])
                         .map((r) => ({ name: String((r as any).name || (r as any).Name || '').trim(), email: String((r as any).email || (r as any).Email || '').trim().toLowerCase() }))
                         .filter((r) => r.name && r.email);
-                    if (!parsed.length) { setErr('No valid rows (need "name" and "email" columns)'); return; }
+                    if (!parsed.length) { setErr(ru.roster.noValidRows); return; }
                     // Skip duplicates that already exist in roster (case-insensitive) and within the CSV itself
                     // Exclude Removed entries from duplicate detection
                     const existing = new Set(rows.filter(x => x.status !== 'Removed').map(x => (x.email || '').toLowerCase()));
@@ -150,26 +151,26 @@ export default function ClassRoster() {
                         toImport.push({ name: rec.name, email: e });
                     }
                     if (!toImport.length) {
-                        setErr(skipped > 0 ? `All emails already exist (${skipped} skipped)` : 'No valid rows to import');
+                        setErr(skipped > 0 ? ru.roster.allExist(skipped) : ru.roster.noValidRows);
                         return;
                     }
                     const res = await authFetch('/api/roster', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: toImport }) });
                     const data = await res.json();
                     if (Array.isArray(data)) {
                         setRows((r) => [...data, ...r]);
-                        setNote(`Imported ${data.length} student${data.length === 1 ? '' : 's'}`);
-                        if (skipped > 0) setErr(`Skipped ${skipped} duplicate email${skipped === 1 ? '' : 's'}`);
+                        setNote(ru.roster.imported(data.length));
+                        if (skipped > 0) setErr(ru.roster.skipped(skipped));
                     } else {
-                        setErr('Import failed');
+                        setErr(uiError((data as { error?: string })?.error, ru.roster.importFailed));
                     }
                 } catch (err: unknown) {
-                    setErr((err as Error)?.message || 'Import failed');
+                    setErr(uiError(err, ru.roster.importFailed));
                 } finally {
                     setBusy(false);
                     evt.target.value = '';
                 }
             },
-            error: (error: { message?: string }) => { setErr(error.message || 'Parse error'); setBusy(false); },
+            error: (error: { message?: string }) => { setErr(uiError(error.message, ru.roster.parseError)); setBusy(false); },
         });
     }
 
@@ -188,15 +189,15 @@ export default function ClassRoster() {
                 await navigator.clipboard.writeText(link);
             } catch {
                 // Fallback: show a prompt so user can copy manually
-                try { window.prompt('Copy invite link', link); } catch { /* ignore */ }
+                try { window.prompt(ru.roster.copyPrompt, link); } catch { /* ignore */ }
             }
             if (data?.emailSent) {
-                setNote('Invite sent and link copied to clipboard');
+                setNote(ru.roster.sentCopied);
             } else {
-                setNote('Invite link copied. Email not sent (SMTP not configured).');
+                setNote(ru.roster.copiedNoEmail);
             }
         } catch (e: any) {
-            setErr(e.message || 'Failed to create invite');
+            setErr(uiError(e, ru.errors.invite));
         } finally {
             setBusy(false);
         }
@@ -209,9 +210,9 @@ export default function ClassRoster() {
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error || 'Failed to cancel invite');
             setRows(r => r.map(x => x.id === row.id ? { ...x, status: 'Pending' } as RosterEntry : x));
-            setNote('Invite canceled; status set to Pending');
+            setNote(ru.roster.canceled);
         } catch (e: any) {
-            setErr(e.message || 'Failed to cancel invite');
+            setErr(uiError(e, ru.errors.cancelInvite));
         } finally {
             setBusy(false);
         }
@@ -222,22 +223,23 @@ export default function ClassRoster() {
             setBusy(true);
             const res = await authFetch(`/api/invites?rosterId=${encodeURIComponent(row.id)}`);
             const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Failed to fetch invite');
+            if (!res.ok) throw new Error(uiError(data?.error || 'Failed to fetch invite', ru.errors.fetchInvite));
             const invite = Array.isArray(data) ? data[0] : data;
             const link = invite?.link as string | undefined;
             if (!link) {
                 // Attempt a refresh to pick up latest status and links
                 await load();
-                throw new Error('Invite link unavailable (roster refreshed).');
+                setErr(ru.roster.linkUnavailable);
+                return;
             }
             try {
                 await navigator.clipboard.writeText(link);
             } catch {
-                try { window.prompt('Copy invite link', link); } catch { /* ignore */ }
+                try { window.prompt(ru.roster.copyPrompt, link); } catch { /* ignore */ }
             }
-            setNote('Invite link copied to clipboard');
+            setNote(ru.roster.copied);
         } catch (e: any) {
-            setErr(e.message || 'Failed to copy link');
+            setErr(uiError(e, ru.roster.copyFailed));
         } finally {
             setBusy(false);
         }
@@ -245,7 +247,7 @@ export default function ClassRoster() {
 
     async function exportRosterCsv() {
         if (exportingCsv) return;
-        if (!user?.token) { setErr('You are not authenticated.'); return; }
+        if (!user?.token) { setErr(uiError('You are not authenticated.', ru.errors.generic)); return; }
         try {
             setExportingCsv(true);
             setErr('');
@@ -253,8 +255,8 @@ export default function ClassRoster() {
                 authFetch('/api/assignments'),
                 authFetch('/api/submissions')
             ]);
-            if (!assignmentsRes.ok) throw new Error('Failed to load assignments');
-            if (!submissionsRes.ok) throw new Error('Failed to load submissions');
+            if (!assignmentsRes.ok) throw new Error(uiError('Failed to load assignments', ru.errors.loadAssignments));
+            if (!submissionsRes.ok) throw new Error(uiError('Failed to load submissions', ru.errors.loadSubmissions));
             const assignmentsJson: unknown = await assignmentsRes.json();
             const submissionsJson: unknown = await submissionsRes.json();
             const assignmentsList = (Array.isArray(assignmentsJson) ? assignmentsJson : []) as Assignment[];
@@ -294,33 +296,33 @@ export default function ClassRoster() {
                     ? assignmentIds.filter((id) => !completedSet.has(id))
                     : [];
                 const missingTitles = missingAssignments.map((id) => assignmentLookup.get(id)?.title || id);
-                const completionRate = totalAssignments ? ((completedSet.size / totalAssignments) * 100).toFixed(1) : 'N/A';
+                const completionRate = totalAssignments ? formatNumber((completedSet.size / totalAssignments) * 100, 1) : ru.roster.na;
                 const missingCount = totalAssignments ? totalAssignments - completedSet.size : 0;
                 const overallStatus = totalAssignments === 0
-                    ? 'No assignments'
+                    ? ru.roster.noAssignments
                     : completedSet.size === totalAssignments
-                        ? 'Complete'
+                        ? ru.roster.complete
                         : completedSet.size > 0
-                            ? 'Partial'
-                            : 'No submissions';
+                            ? ru.roster.partial
+                            : ru.roster.noSubmissions;
                 return {
-                    Name: entry.name || '',
-                    Email: entry.email || '',
-                    'Roster Status': entry.status || 'Unknown',
-                    'Assignments Published': totalAssignments,
-                    'Assignments Attempted': attemptedSet.size,
-                    'Assignments Completed': completedSet.size,
-                    'Assignments Missing': missingCount,
-                    'Completion Rate (%)': completionRate,
-                    'Overall Progress': overallStatus,
-                    'Completed Assignments': completedTitles.join('; '),
-                    'Assignments In Progress': attemptedInProgressTitles.join('; '),
-                    'Missing Assignments': missingTitles.join('; '),
+                    [ru.roster.name]: entry.name || '',
+                    [ru.roster.email]: entry.email || '',
+                    [ru.roster.csv.rosterStatus]: statusLabel(entry.status) || ru.roster.unknown,
+                    [ru.roster.csv.published]: totalAssignments,
+                    [ru.roster.csv.attempted]: attemptedSet.size,
+                    [ru.roster.csv.completed]: completedSet.size,
+                    [ru.roster.csv.missing]: missingCount,
+                    [ru.roster.csv.rate]: completionRate,
+                    [ru.roster.csv.progress]: overallStatus,
+                    [ru.roster.csv.completedList]: completedTitles.join('; '),
+                    [ru.roster.csv.inProgress]: attemptedInProgressTitles.join('; '),
+                    [ru.roster.csv.missingList]: missingTitles.join('; '),
                 };
             });
 
             if (!dataset.length) {
-                setErr('No roster entries to export.');
+                setErr(ru.roster.exportEmpty);
                 return;
             }
 
@@ -335,9 +337,9 @@ export default function ClassRoster() {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            setNote('Roster progress exported');
+            setNote(ru.roster.exported);
         } catch (e: any) {
-            setErr(e?.message || 'Failed to export roster progress');
+            setErr(uiError(e, ru.roster.exportFailed));
         } finally {
             setExportingCsv(false);
         }
@@ -352,23 +354,23 @@ export default function ClassRoster() {
                     // Instructors and TAs can import
                     ...((isInstructor || isTA) ? [{
                         key: 'import',
-                        label: 'Import CSV',
-                        ariaLabel: 'Import CSV',
+                        label: ru.roster.import,
+                        ariaLabel: ru.roster.import,
                         icon: <UploadFileIcon fontSize='small' />,
                         onClick: () => { /* trigger hidden input */ inputRef.current?.click(); },
                     }] : []),
                     ...(isInstructor ? [{
                         key: 'export',
-                        label: exportingCsv ? 'Exporting…' : 'Export CSV',
-                        ariaLabel: 'Export roster progress CSV',
+                        label: exportingCsv ? ru.roster.exporting : ru.roster.export,
+                        ariaLabel: ru.roster.exportTip,
                         icon: <FileDownloadIcon fontSize='small' />,
                         onClick: () => exportRosterCsv(),
                         disabled: busy || exportingCsv || rows.length === 0,
                     }] : []),
                     {
                         key: 'refresh',
-                        ariaLabel: 'Refresh roster',
-                        label: 'Refresh',
+                        ariaLabel: ru.roster.refresh,
+                        label: ru.common.refresh,
                         icon: <RefreshIcon fontSize='small' />,
                         onClick: () => load(),
                         disabled: busy || exportingCsv,
@@ -380,26 +382,26 @@ export default function ClassRoster() {
     );
 
     return (
-        <PageCard headerTitle='Class Roster' headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain' loadingProgress={busy || exportingCsv}>
+        <PageCard headerTitle={ru.roster.title} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain' loadingProgress={busy || exportingCsv}>
             <Box sx={{ p: { xs: 1.5, md: 2 } }}>
                 {(isInstructor || isTA) && (
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'flex-end' }} sx={{ mb: 2 }}>
-                        <TextField size="small" label="Full name" value={name} onChange={(e) => setName(e.target.value)} sx={{ flex: 1 }} />
-                        <TextField size="small" label="Email" value={email} onChange={(e) => setEmail(e.target.value)} sx={{ flex: 1 }} />
-                        <Button variant="contained" startIcon={<PersonAddIcon />} onClick={addOne} disabled={busy}>Add</Button>
+                        <TextField size="small" label={ru.roster.fullName} value={name} onChange={(e) => setName(e.target.value)} sx={{ flex: 1, '& .MuiInputLabel-root': { whiteSpace: 'normal' } }} />
+                        <TextField size="small" label={ru.roster.email} value={email} onChange={(e) => setEmail(e.target.value)} sx={{ flex: 1 }} />
+                        <Button variant="contained" startIcon={<PersonAddIcon />} onClick={addOne} disabled={busy} sx={{ whiteSpace: 'normal' }}>{ru.roster.add}</Button>
                     </Stack>
                 )}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="flex-end" sx={{ mb: 1 }}>
                     <TextField
                         size="small"
-                        label="Search"
+                        label={ru.roster.search}
                         type="search"
-                        placeholder="Search name or email"
+                        placeholder={ru.roster.searchPh}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         InputProps={{
                             endAdornment: search ? (
-                                <IconButton aria-label="Clear search" size="small" onClick={() => setSearch('')}>
+                                <IconButton aria-label={ru.roster.clear} size="small" onClick={() => setSearch('')}>
                                     <CancelIcon fontSize="small" />
                                 </IconButton>
                             ) : undefined,
@@ -409,7 +411,8 @@ export default function ClassRoster() {
                     {user?.role === 'instructor' && (
                         <FormControlLabel
                             control={<Switch size="small" checked={showRemoved} onChange={(_, checked) => setShowRemoved(checked)} />}
-                            label="Show removed"
+                            label={ru.roster.showRemoved}
+                            sx={{ whiteSpace: 'normal', mr: 0 }}
                         />
                     )}
                 </Stack>
@@ -417,11 +420,11 @@ export default function ClassRoster() {
                     <TableHead>
                         <TableRow>
                             <TableCell width={56}>#</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Email</TableCell>
-                            <TableCell>Status</TableCell>
-                            {user?.role === 'instructor' && <TableCell>Privileges</TableCell>}
-                            <TableCell align="right">Actions</TableCell>
+                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.roster.name}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.roster.email}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.roster.status}</TableCell>
+                            {user?.role === 'instructor' && <TableCell sx={{ whiteSpace: 'normal' }}>{ru.roster.privileges}</TableCell>}
+                            <TableCell align="right" sx={{ whiteSpace: 'normal' }}>{ru.roster.actions}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -438,11 +441,12 @@ export default function ClassRoster() {
                                                 const inv = invitesByRoster[r.id];
                                                 if (inv?.expiresAt && !inv.usedAt) {
                                                     const exp = new Date(inv.expiresAt).getTime();
-                                                    if (Date.now() > exp) return 'Expired';
+                                                    if (Date.now() > exp) return ru.roster.expired;
                                                 }
                                             }
-                                            return r.status;
+                                            return statusLabel(r.status);
                                         })()}
+                                        sx={{ height: 'auto', maxWidth: 160, '& .MuiChip-label': { whiteSpace: 'normal' } }}
                                         color={(() => {
                                             const inv = invitesByRoster[r.id];
                                             if (r.status === 'Invited' && inv?.expiresAt && !inv.usedAt) {
@@ -457,7 +461,8 @@ export default function ClassRoster() {
                                             if (inv?.expiresAt) {
                                                 const expDate = new Date(inv.expiresAt);
                                                 const expired = Date.now() > expDate.getTime();
-                                                return expired ? `Invite expired ${expDate.toLocaleString()}` : `Invite expires ${expDate.toLocaleString()}`;
+                                                const when = formatDateTimeDDMMYYYYHHmm(inv.expiresAt);
+                                                return expired ? ru.roster.inviteExpired(when) : ru.roster.inviteExpires(when);
                                             }
                                             return undefined;
                                         })()}
@@ -465,8 +470,9 @@ export default function ClassRoster() {
                                 </TableCell>
                                 {user?.role === 'instructor' && <TableCell>
                                     {r.status !== 'Removed' ? (
-                                        <Tooltip title="Teaching Assistant" arrow>
+                                        <Tooltip title={ru.roster.taLong} arrow>
                                             <FormControlLabel
+                                                sx={{ ml: 0, whiteSpace: 'normal' }}
                                                 control={<Switch size="small" checked={!!r.evaluator} onChange={async (_, checked) => {
                                                     try {
                                                         setBusy(true);
@@ -474,14 +480,14 @@ export default function ClassRoster() {
                                                         const data = await res.json();
                                                         if (!res.ok) throw new Error(data?.error || 'Failed to update');
                                                         setRows(rows => rows.map(x => x.id === r.id ? { ...x, evaluator: data.evaluator } : x));
-                                                        setNote(checked ? 'Granted Teaching Assistant privilege' : 'Revoked Teaching Assistant privilege');
+                                                        setNote(checked ? ru.roster.grantTa : ru.roster.revokeTa);
                                                     } catch (e: any) {
-                                                        setErr(e.message || 'Update failed');
+                                                        setErr(uiError(e, ru.errors.updateRoster));
                                                     } finally {
                                                         setBusy(false);
                                                     }
                                                 }} />}
-                                                label="TA"
+                                                label={ru.roster.ta}
                                             />
                                         </Tooltip>
                                     ) : (
@@ -492,28 +498,32 @@ export default function ClassRoster() {
                                     {(isInstructor || isTA) ? (
                                         <>
                                             {r.status === 'Pending' && (
-                                                <Tooltip title="Create & copy invite link">
+                                                <Tooltip title={ru.roster.createInvite}>
                                                     <span>
                                                         <IconButton size="small" color="primary" onClick={() => createInvite(r)} disabled={busy}><LinkIcon fontSize="small" /></IconButton>
                                                     </span>
                                                 </Tooltip>
                                             )}
                                             {r.status === 'Invited' && (
-                                                <Tooltip title="Copy invite link">
+                                                <Tooltip title={ru.roster.copyInvite}>
                                                     <span>
                                                         <IconButton size="small" color="secondary" onClick={() => copyInviteLink(r)} disabled={busy}><LinkIcon fontSize="small" /></IconButton>
                                                     </span>
                                                 </Tooltip>
                                             )}
                                             {isInstructor && r.status === 'Invited' && (
-                                                <Tooltip title="Cancel invite">
+                                                <Tooltip title={ru.roster.cancelInvite}>
                                                     <span>
                                                         <IconButton size="small" color="warning" onClick={() => cancelInvite(r)} disabled={busy}><CancelIcon fontSize="small" /></IconButton>
                                                     </span>
                                                 </Tooltip>
                                             )}
                                             {isInstructor && r.status !== 'Removed' && (
-                                                <IconButton size="small" color="error" onClick={() => remove(r.id)} disabled={busy}><DeleteIcon fontSize="small" /></IconButton>
+                                                <Tooltip title={ru.common.delete}>
+                                                    <span>
+                                                        <IconButton size="small" color="error" aria-label={ru.common.delete} onClick={() => remove(r.id)} disabled={busy}><DeleteIcon fontSize="small" /></IconButton>
+                                                    </span>
+                                                </Tooltip>
                                             )}
                                         </>
                                     ) : null}
@@ -522,8 +532,8 @@ export default function ClassRoster() {
                         ))}
                         {rowsToShow.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={isInstructor ? 6 : 5}>
-                                    {rows.length === 0 ? 'No students yet.' : 'No matches.'}
+                                <TableCell colSpan={isInstructor ? 6 : 5} sx={{ whiteSpace: 'normal' }}>
+                                    {rows.length === 0 ? ru.roster.empty : ru.roster.noMatches}
                                 </TableCell>
                             </TableRow>
                         )}

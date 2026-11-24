@@ -7,6 +7,7 @@ import Logo from '@/components/Logo';
 import KeyIcon from '@mui/icons-material/VpnKey';
 import { signIn } from 'next-auth/react';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m } from '@/i18n';
 
 export default function StudentLoginPage() {
     const { setUser } = useAuth();
@@ -77,7 +78,7 @@ export default function StudentLoginPage() {
                         }}>
                             <Box sx={{ display: 'grid', placeItems: 'center' }}>
                                 <Logo height={48} variant="default" />
-                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>Student</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{m.auth.student}</Typography>
                             </Box>
                         </Box>
                     }
@@ -95,16 +96,16 @@ export default function StudentLoginPage() {
                             '&:hover': { background: (t) => `${t.palette.secondary.main}12` },
                         }}
                     >
-                        Sign in with Keycloak
+                        {m.auth.signInKeycloak}
                     </Button>
 
                     {ssoReady && (
                         <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <Typography variant="caption" color="text.secondary">
-                                {ssoEmail ? `Signed in with Keycloak as ${ssoEmail}` : 'Keycloak session detected'}
+                                {ssoEmail ? m.auth.signedInAs(ssoEmail) : m.auth.sessionDetected}
                             </Typography>
                             <Button size="small" variant="text" onClick={() => { window.location.href = '/api/auth/idp-logout?redirect=/'; }}>
-                                Sign out
+                                {m.auth.signOut}
                             </Button>
                         </Box>
                     )}
@@ -113,7 +114,7 @@ export default function StudentLoginPage() {
 
             <Box sx={{ mt: 1.5, textAlign: 'center' }}>
                 <MuiLink component={NextLink} href="/" color="text.secondary" underline="hover" sx={{ fontSize: '0.875rem' }}>
-                    ← Back to role picker
+                    {m.auth.backToRoles}
                 </MuiLink>
             </Box>
         </Box>

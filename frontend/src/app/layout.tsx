@@ -7,7 +7,7 @@ import { AuthBootClient } from './AuthBootClient';
 
 export const metadata: Metadata = {
   title: 'SOCOLES',
-  description: 'An SQL grader for students and instructors',
+  description: 'Система проверки SQL для студентов и преподавателей',
   icons: {
     icon: [
       { url: '/icons/socoles-logo.svg', type: 'image/svg+xml' },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ru">
       <head>
         <link rel="icon" type="image/svg+xml" href="/icons/socoles-logo.svg" />
         <link rel="shortcut icon" href="/icons/socoles-logo.ico" />

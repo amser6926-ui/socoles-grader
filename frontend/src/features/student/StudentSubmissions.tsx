@@ -2,6 +2,7 @@
 import { Typography, Button, Chip, Box, Tooltip } from '@mui/material';
 import GenericTile from '@/components/GenericTile';
 import { formatDateTimeDDMMYYYYHHmm } from '@/lib/format';
+import { formatDue, formatNumber, m, statusLabel, uiError } from '@/i18n';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useState, useEffect, useMemo } from 'react';
@@ -11,11 +12,11 @@ import DifficultyChip from '@/components/DifficultyChip';
 function parseDueMs(input: string): number {
     if (!input) return NaN;
     const trimmed = input.trim();
-    const m = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/); // DD-MM-YYYY
-    if (m) {
-        const day = parseInt(m[1], 10);
-        const month = parseInt(m[2], 10);
-        let year = parseInt(m[3], 10);
+    const dueMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/); // DD-MM-YYYY
+    if (dueMatch) {
+        const day = parseInt(dueMatch[1], 10);
+        const month = parseInt(dueMatch[2], 10);
+        let year = parseInt(dueMatch[3], 10);
         if (year < 100) year += 2000;
         return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
     }
@@ -29,7 +30,7 @@ export default function StudentSubmissions({ rows = [] as any[], onRefresh, onOp
     const [assignmentsMeta, setAssignmentsMeta] = useState<any[]>([]);
     const [pendingBySubmission, setPendingBySubmission] = useState<Record<string, boolean>>({});
 
-    const formatGrade = (g: number | null | undefined) => (typeof g === 'number' && isFinite(g) ? g.toFixed(2) : '—');
+    const formatGrade = (g: number | null | undefined) => (typeof g === 'number' && isFinite(g) ? formatNumber(g, 2) : '—');
 
     useEffect(() => { setLocalRows(rows); }, [rows]);
 
@@ -78,7 +79,7 @@ export default function StudentSubmissions({ rows = [] as any[], onRefresh, onOp
         const target = localRows.find(r => r.id === id);
         if (!target) return;
         if (target.status === 'Submitted') return; // safeguard
-        if (!confirm('Delete this in-progress submission?')) return;
+        if (!confirm(m.submissions.deleteConfirm)) return;
         try {
             const res = await authFetch(`/api/submissions?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
@@ -86,7 +87,7 @@ export default function StudentSubmissions({ rows = [] as any[], onRefresh, onOp
                 if (onRefresh) onRefresh();
             } else {
                 const d = await res.json();
-                alert(d?.error || 'Failed to delete');
+                alert(uiError(d?.error, m.errors.deleteSubmission));
             }
         } catch { /* ignore */ }
     }
@@ -94,9 +95,9 @@ export default function StudentSubmissions({ rows = [] as any[], onRefresh, onOp
     return (
         <Box sx={{ display: 'grid', gap: 2 }}>
             {localRows.length === 0 && (
-                <Typography color="text.secondary" variant="body2">No submissions yet.</Typography>
+                <Typography color="text.secondary" variant="body2">{m.submissions.none}</Typography>
             )}
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill,minmax(340px,1fr))' } }}>
+            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill,minmax(360px,1fr))' } }}>
                 {localRows.map((s: any) => {
                     const isFinished = ['Submitted', 'Auto-graded', 'Needs review'].includes(s.status);
                     const underReview = pendingBySubmission[s.id];
@@ -107,8 +108,8 @@ export default function StudentSubmissions({ rows = [] as any[], onRefresh, onOp
                     // Prepare grade summary: show grade and percent if possible
                     const pts = typeof meta?.points === 'number' ? meta.points : null;
                     const rawGrade = typeof s.grade === 'number' && isFinite(s.grade) ? s.grade : null;
-                    const percent = rawGrade != null && pts ? ((rawGrade / pts) * 100).toFixed(0) : null;
-                    const gradeLabel = rawGrade != null ? `${rawGrade.toFixed(2)}${pts ? '/' + pts : ''}${percent ? ' (' + percent + '%)' : ''}` : '—';
+                    const percent = rawGrade != null && pts ? formatNumber((rawGrade / pts) * 100, 0) : null;
+                    const gradeLabel = rawGrade != null ? `${formatNumber(rawGrade, 2)}${pts ? '/' + formatNumber(pts, 0) : ''}${percent ? ' (' + percent + '%)' : ''}` : '—';
 
                     const tags: string[] = Array.isArray(meta?.tags) ? meta.tags : [];
                     const visibleTags = tags.slice(0, 3);
@@ -127,24 +128,24 @@ export default function StudentSubmissions({ rows = [] as any[], onRefresh, onOp
                             {/* Header: Title + difficulty + status chip right */}
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2, pr: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta?.title ?? '—'}</Typography>
-                                    <Typography variant="caption" color="text.secondary">{isFinished ? 'Submitted' : 'Started'}: {formatDateTimeDDMMYYYYHHmm(s.date)}</Typography>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.25, pr: 1, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{meta?.title ?? '—'}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{isFinished ? m.submissions.submitted : m.submissions.started}: {formatDateTimeDDMMYYYYHHmm(s.date)}</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
                                     {meta?.difficulty && <DifficultyChip value={meta.difficulty} size='small' />}
-                                    <Chip size="small" label={underReview ? 'Under Review' : s.status} color={underReview ? 'warning' : s.status === 'Auto-graded' ? 'primary' : (isFinished ? 'success' : overdue ? 'error' : 'default')} variant={underReview || s.status === 'Auto-graded' ? 'outlined' : 'filled'} />
+                                    <Chip size="small" label={underReview ? m.submissions.underReview : statusLabel(s.status)} color={underReview ? 'warning' : s.status === 'Auto-graded' ? 'primary' : (isFinished ? 'success' : overdue ? 'error' : 'default')} variant={underReview || s.status === 'Auto-graded' ? 'outlined' : 'filled'} />
                                 </Box>
                             </Box>
 
                             {/* Meta line */}
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1.2, rowGap: 0.5, alignItems: 'center' }}>
                                 <Typography variant="caption" color={overdue ? 'error.main' : 'text.secondary'}>
-                                    Due: {meta?.due ? meta.due : '—'}{overdue ? ' (overdue)' : ''}
+                                    {m.common.due}: {meta?.due ? formatDue(meta.due) : '—'}{overdue ? ` (${m.submissions.overdue.toLowerCase()})` : ''}
                                 </Typography>
                                 {pts != null && (
-                                    <Typography variant="caption" color="text.secondary">Points: {pts}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{m.common.points}: {formatNumber(pts, 0)}</Typography>
                                 )}
-                                <Typography variant="caption" color="text.secondary">Grade: {gradeLabel}</Typography>
+                                <Typography variant="caption" color="text.secondary">{m.common.grade}: {gradeLabel}</Typography>
                             </Box>
 
                             {/* Tags block */}
@@ -162,11 +163,11 @@ export default function StudentSubmissions({ rows = [] as any[], onRefresh, onOp
                             {/* Bottom row: left = status summary, right = action */}
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.25 }}>
                                 <Typography variant="caption" color="text.secondary">
-                                    {underReview ? 'Under Review' : overdue ? 'Overdue' : isFinished ? 'Finished' : s.status || 'In Progress'}
+                                    {underReview ? m.submissions.underReview : overdue ? m.submissions.overdue : isFinished ? m.submissions.finished : statusLabel(s.status || 'In Progress')}
                                 </Typography>
                                 {s.status === 'In Progress' && (
-                                    <Tooltip title="Delete in-progress submission">
-                                        <Button size="small" color="error" variant="outlined" onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}>Delete</Button>
+                                    <Tooltip title={m.submissions.deleteTitle}>
+                                        <Button size="small" color="error" variant="outlined" onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}>{m.submissions.delete}</Button>
                                     </Tooltip>
                                 )}
                             </Box>

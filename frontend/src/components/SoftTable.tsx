@@ -1,5 +1,6 @@
 'use client';
 import { Card, CardContent, CardHeader, Typography, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
+import { csvHeaderLabel, formatNumber, m } from '@/i18n';
 
 export default function SoftTable({
     title,
@@ -10,7 +11,7 @@ export default function SoftTable({
     const formatCell = (header: string, value: unknown) => {
         const key = String(header).toLowerCase();
         if (['grade', 'score', 'percent', 'percentage'].includes(key) && typeof value === 'number' && isFinite(value)) {
-            return String(value.toFixed(2));
+            return formatNumber(value, 2);
         }
         return String(value ?? '');
     };
@@ -23,7 +24,7 @@ export default function SoftTable({
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                {headers.map((h) => <TableCell key={h}>{h}</TableCell>)}
+                                {headers.map((h) => <TableCell key={h} sx={{ whiteSpace: 'normal' }}>{csvHeaderLabel(h)}</TableCell>)}
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -35,7 +36,7 @@ export default function SoftTable({
                         </TableBody>
                     </Table>
                 ) : (
-                    <Typography color="text.secondary">No data.</Typography>
+                    <Typography color="text.secondary">{m.common.noData}</Typography>
                 )}
             </CardContent>
         </Card>

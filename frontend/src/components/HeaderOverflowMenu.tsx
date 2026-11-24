@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { m } from '@/i18n';
 
 export interface OverflowMenuAction {
     key: string;
@@ -32,7 +33,7 @@ const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({ actions }) => {
 
     return (
         <>
-            <IconButton aria-label="More actions" onClick={handleOpen} size="small">
+            <IconButton aria-label={m.common.more} onClick={handleOpen} size="small">
                 <MoreVertIcon sx={{ color: '#fff' }} />
             </IconButton>
             <Menu anchorEl={anchorEl} open={open} onClose={handleClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>

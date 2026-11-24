@@ -28,6 +28,8 @@ import AssignmentQuestionPicker, { AssignmentQuestionPickerHandle } from './Assi
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
+import 'dayjs/locale/ru';
+import { difficultyLabel, formatDue, m as ru, statusLabel, uiError } from '@/i18n';
 import StudentAssignmentPlayer from '@/features/student/StudentAssignmentPlayer';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -91,7 +93,7 @@ export default function AssignmentQuestionManager() {
             }
             const data = await res.json();
             setAssignments(data);
-        } catch (e: any) { setError(e.message); } finally { setLoading(false); }
+        } catch (e: any) { setError(uiError(e, ru.errors.loadAssignments)); } finally { setLoading(false); }
     }
 
     useEffect(() => { loadAssignments(); }, [user?.token]); // reload when auth ready
@@ -107,7 +109,7 @@ export default function AssignmentQuestionManager() {
             attemptsAllowed: Math.max(1, Math.floor(Number(attemptsAllowed) || 1)),
             published,
         };
-        if (!payload.title) { setError('Title required'); setCreating(false); return; }
+        if (!payload.title) { setError(ru.assignments.titleRequired); setCreating(false); return; }
         try {
             if (!user?.token) throw new Error('Not authenticated');
             const res = await authFetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -119,9 +121,9 @@ export default function AssignmentQuestionManager() {
             setAssignments(prev => [a, ...prev]);
             setSelectedId(a.id);
             setTitle(''); setTags(''); setPoints(0); setDue(''); setAttemptsAllowed(3); setPublished(false);
-            setNote('Assignment created');
+            setNote(ru.assignments.created);
             setView('list');
-        } catch (e: any) { setError(e.message); } finally { setCreating(false); }
+        } catch (e: any) { setError(uiError(e, ru.errors.createAssignment)); } finally { setCreating(false); }
     }
     function startCreate() {
         setTitle('');
@@ -172,13 +174,13 @@ export default function AssignmentQuestionManager() {
             }
             const updated = await res.json();
             setAssignments(list => list.map(a => a.id === updated.id ? updated : a));
-            setNote('Updated');
+            setNote(ru.assignments.updated);
             setEditingId(null);
             setView('list');
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) { setError(uiError(e, ru.errors.updateAssignment)); }
     }
     async function deleteAssignment(id: string) {
-        if (!confirm('Delete assignment? This will unlink its questions.')) return;
+        if (!confirm(ru.assignments.deleteConfirm)) return;
         try {
             if (!user?.token) throw new Error('Not authenticated');
             const res = await authFetch(`/api/assignments?id=${id}`, { method: 'DELETE' });
@@ -188,8 +190,8 @@ export default function AssignmentQuestionManager() {
             }
             setAssignments(list => list.filter(a => a.id !== id));
             if (selectedId === id) setSelectedId(null);
-            setNote('Deleted');
-        } catch (e: any) { setError(e.message); }
+            setNote(ru.assignments.deleted);
+        } catch (e: any) { setError(uiError(e, ru.errors.deleteAssignment)); }
     }
 
     async function togglePublishedState(target: Assignment, next: boolean) {
@@ -207,9 +209,9 @@ export default function AssignmentQuestionManager() {
             }
             const updated = await res.json();
             setAssignments(list => list.map(a => a.id === updated.id ? updated : a));
-            setNote(updated.published ? 'Assignment published' : 'Assignment unpublished');
+            setNote(updated.published ? ru.assignments.published : ru.assignments.unpublished);
         } catch (e: any) {
-            setError(e.message);
+            setError(uiError(e, ru.errors.publishAssignment));
         }
     }
 
@@ -251,32 +253,32 @@ export default function AssignmentQuestionManager() {
             {view === 'list' && !pickerMode && (
                 <HeaderActions
                     actions={[
-                        { key: 'add', ariaLabel: 'Add assignment', title: 'Add assignment', icon: <AddIcon fontSize='small' />, onClick: startCreate },
-                        { key: 'reload', ariaLabel: 'Reload assignments', title: 'Reload assignments', icon: <RefreshIcon fontSize='small' />, onClick: () => loadAssignments(), disabled: loading }
+                        { key: 'add', ariaLabel: ru.assignments.add, title: ru.assignments.add, icon: <AddIcon fontSize='small' />, onClick: startCreate },
+                        { key: 'reload', ariaLabel: ru.assignments.reload, title: ru.assignments.reload, icon: <RefreshIcon fontSize='small' />, onClick: () => loadAssignments(), disabled: loading }
                     ]}
                 />
             )}
             {view === 'editor' && !pickerMode && (
-                <HeaderActionButton onClick={() => { setView('list'); setEditingId(null); }} aria-label='Back to list' title='Back to list'>
+                <HeaderActionButton onClick={() => { setView('list'); setEditingId(null); }} aria-label={ru.assignments.backList} title={ru.assignments.backList}>
                     <ArrowBackIcon fontSize='small' />
                 </HeaderActionButton>
             )}
             {pickerMode && (
                 <HeaderActions
                     actions={[
-                        { key: 'back', ariaLabel: 'Back to assignments', title: 'Back to assignments', icon: <ArrowBackIcon fontSize='small' />, onClick: () => setPickerMode(false) },
-                        { key: 'save', ariaLabel: 'Save changes', title: 'Save changes', icon: <SaveIcon fontSize='small' />, onClick: () => pickerRef.current?.save?.() }
+                        { key: 'back', ariaLabel: ru.assignments.back, title: ru.assignments.back, icon: <ArrowBackIcon fontSize='small' />, onClick: () => setPickerMode(false) },
+                        { key: 'save', ariaLabel: ru.assignments.save, title: ru.assignments.save, icon: <SaveIcon fontSize='small' />, onClick: () => pickerRef.current?.save?.() }
                     ]}
                 />
             )}
         </>
     );
 
-    const pageTitle = pickerMode ? `Assignment Questions${selected ? ': ' + selected.title : ''}` : (view === 'editor' ? (editingId ? 'Edit Assignment' : 'Create Assignment') : 'Assignments');
+    const pageTitle = pickerMode ? ru.assignments.questionsTitle(selected?.title) : (view === 'editor' ? (editingId ? ru.assignments.edit : ru.assignments.create) : ru.assignments.list);
     const actionTarget = useMemo(() => assignments.find(a => a.id === actionTargetId) || null, [actionTargetId, assignments]);
 
     return (
-        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale='en-gb'>
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale='ru'>
             <PageCard
                 headerTitle={pageTitle}
                 headerProps={{ height: 56 }}
@@ -288,27 +290,27 @@ export default function AssignmentQuestionManager() {
                 ) : view === 'editor' ? (
                     <Box sx={{ p: { xs: 1.5, md: 2 }, borderRadius: 2, bgcolor: 'transparent' }}>
                         <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { sm: 'repeat(2,1fr)', xs: '1fr' } }}>
-                            <TextField label='Title' value={title} onChange={e => setTitle(e.target.value)} variant='outlined' size='small' fullWidth required />
-                            <TextField label='Difficulty' value={difficulty} onChange={e => setDifficulty(e.target.value)} select size='small'>
-                                {['Beginner', 'Intermediate', 'Advanced'].map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                            <TextField label={ru.common.title} value={title} onChange={e => setTitle(e.target.value)} variant='outlined' size='small' fullWidth required />
+                            <TextField label={ru.common.difficulty} value={difficulty} onChange={e => setDifficulty(e.target.value)} select size='small'>
+                                {['Beginner', 'Intermediate', 'Advanced'].map(d => <MenuItem key={d} value={d}>{difficultyLabel(d)}</MenuItem>)}
                             </TextField>
-                            <TextField label='Points' type='number' value={points} onChange={e => setPoints(Number(e.target.value || 0))} variant='outlined' size='small' />
-                            <DatePicker label='Due' value={dueDayjs} onChange={(v: Dayjs | null) => setDue(v ? v.format('DD-MM-YYYY') : '')} format='DD-MM-YYYY' slotProps={{ textField: { size: 'small', variant: 'outlined', placeholder: '31-12-2025' } }} />
-                            <TextField label='Tags (comma)' value={tags} onChange={e => setTags(e.target.value)} variant='outlined' size='small' />
-                            <TextField label='Attempts allowed' type='number' value={attemptsAllowed} onChange={e => setAttemptsAllowed(Math.max(1, Math.floor(Number(e.target.value) || 1)))} variant='outlined' size='small' inputProps={{ min: 1, step: 1 }} />
+                            <TextField label={ru.common.points} type='number' value={points} onChange={e => setPoints(Number(e.target.value || 0))} variant='outlined' size='small' />
+                            <DatePicker label={ru.assignments.dueHelp} value={dueDayjs} onChange={(v: Dayjs | null) => setDue(v ? v.format('DD-MM-YYYY') : '')} format='DD-MM-YYYY' slotProps={{ textField: { size: 'small', variant: 'outlined', placeholder: '31-12-2025' } }} />
+                            <TextField label={ru.assignments.tags} value={tags} onChange={e => setTags(e.target.value)} variant='outlined' size='small' />
+                            <TextField label={ru.assignments.attemptsAllowed} type='number' value={attemptsAllowed} onChange={e => setAttemptsAllowed(Math.max(1, Math.floor(Number(e.target.value) || 1)))} variant='outlined' size='small' inputProps={{ min: 1, step: 1 }} />
                         </Box>
                         <FormControlLabel
                             control={<Switch checked={published} onChange={(_, v) => setPublished(v)} size='small' />}
-                            label={published ? 'Published' : 'Draft'}
-                            sx={{ mt: 1 }}
+                            label={statusLabel(published ? 'Published' : 'Draft')}
+                            sx={{ mt: 1, '& .MuiFormControlLabel-label': { whiteSpace: 'normal' } }}
                         />
                         {error && <Typography variant='caption' color='error' sx={{ mt: 1, display: 'block' }}>{error}</Typography>}
                         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1, flexWrap: 'wrap' }}>
-                            <Button variant='outlined' size='small' onClick={() => { setEditingId(null); setView('list'); }}>Cancel</Button>
+                            <Button variant='outlined' size='small' onClick={() => { setEditingId(null); setView('list'); }} sx={{ whiteSpace: 'normal' }}>{ru.common.cancel}</Button>
                             {editingId ? (
-                                <Button variant='contained' size='small' onClick={saveEdit} disabled={!title.trim()}>Update</Button>
+                                <Button variant='contained' size='small' onClick={saveEdit} disabled={!title.trim()} sx={{ whiteSpace: 'normal' }}>{ru.common.update}</Button>
                             ) : (
-                                <Button variant='contained' size='small' onClick={createAssignment} disabled={creating || !title.trim()}>{creating ? 'Creating…' : 'Create'}</Button>
+                                <Button variant='contained' size='small' onClick={createAssignment} disabled={creating || !title.trim()} sx={{ whiteSpace: 'normal' }}>{creating ? ru.assignments.creating : ru.common.create}</Button>
                             )}
                         </Box>
                     </Box>
@@ -316,8 +318,8 @@ export default function AssignmentQuestionManager() {
                     <Box sx={{ p: { xs: 1.5, md: 2 }, pt: 2 }}>
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
                             <TextField
-                                label='Search assignments'
-                                placeholder='Title, tag'
+                                label={ru.assignments.search}
+                                placeholder={ru.assignments.searchPh}
                                 value={filter}
                                 onChange={e => setFilter(e.target.value)}
                                 variant='outlined'
@@ -333,19 +335,19 @@ export default function AssignmentQuestionManager() {
                                         title={a.title}
                                         subtitle={a.course}
                                         chips={[
-                                            <Chip key="published" size="small" label={a.published ? 'Published' : 'Draft'} color={a.published ? 'success' : 'default'} variant={a.published ? 'filled' : 'outlined'} />,
+                                            <Chip key="published" size="small" label={statusLabel(a.published ? 'Published' : 'Draft')} color={a.published ? 'success' : 'default'} variant={a.published ? 'filled' : 'outlined'} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />,
                                             <DifficultyChip key="difficulty" value={a.difficulty} />,
-                                            <Chip key="points" size="small" label={`${a.points} pts`} variant="outlined" />,
-                                            <Chip key="attempts" size="small" label={`Attempts: ${(a as any).attemptsAllowed ?? 3}`} variant="outlined" />,
-                                            <Chip key="due" size="small" label={`Due: ${a.due || '—'}`} variant="outlined" />
+                                            <Chip key="points" size="small" label={ru.common.pts(a.points)} variant="outlined" sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />,
+                                            <Chip key="attempts" size="small" label={ru.common.attemptsCount((a as any).attemptsAllowed ?? 3)} variant="outlined" sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />,
+                                            <Chip key="due" size="small" label={ru.common.dueOn(a.due ? formatDue(a.due) : '—')} variant="outlined" sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
                                         ]}
                                         onClick={() => { setSelectedId(a.id); setPickerMode(true); }}
                                         tabIndex={0}
                                         role="button"
                                         onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(a.id); setPickerMode(true); } }}
                                         headerRight={(
-                                            <Tooltip title='Actions'>
-                                                <IconButton size='small' onClick={(e) => { e.stopPropagation(); openActions(e, a); }} aria-label={`Actions for ${a.title}`}>
+                                            <Tooltip title={ru.common.actions}>
+                                                <IconButton size='small' onClick={(e) => { e.stopPropagation(); openActions(e, a); }} aria-label={ru.common.actionsFor(a.title)}>
                                                     <MoreVertIcon fontSize='small' />
                                                 </IconButton>
                                             </Tooltip>
@@ -355,7 +357,7 @@ export default function AssignmentQuestionManager() {
                             </TilesGrid>
                         )}
                         {!loading && !filteredAssignments.length && (
-                            <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>No assignments found.</Typography>
+                            <Typography variant='body2' color='text.secondary' sx={{ mt: 2, whiteSpace: 'normal' }}>{ru.assignments.none}</Typography>
                         )}
                         {error && <Typography variant='caption' color='error' sx={{ mt: 1 }}>{error}</Typography>}
                         {/* Overflow actions menu (stays outside grid mapping) */}
@@ -372,7 +374,7 @@ export default function AssignmentQuestionManager() {
                                 }}
                             >
                                 <ListItemIcon>{actionTarget?.published ? <UnpublishedIcon fontSize='small' /> : <PublishIcon fontSize='small' />}</ListItemIcon>
-                                <ListItemText>{actionTarget?.published ? 'Unpublish' : 'Publish'}</ListItemText>
+                                <ListItemText>{actionTarget?.published ? ru.assignments.unpublish : ru.assignments.publish}</ListItemText>
                             </MenuItem>
                             <MenuItem
                                 onClick={() => {
@@ -381,7 +383,7 @@ export default function AssignmentQuestionManager() {
                                 }}
                             >
                                 <ListItemIcon><PreviewIcon fontSize='small' /></ListItemIcon>
-                                <ListItemText>Preview as student</ListItemText>
+                                <ListItemText>{ru.assignments.previewStudent}</ListItemText>
                             </MenuItem>
                             <MenuItem
                                 onClick={() => {
@@ -390,7 +392,7 @@ export default function AssignmentQuestionManager() {
                                 }}
                             >
                                 <ListItemIcon><EditIcon fontSize='small' /></ListItemIcon>
-                                <ListItemText>Edit details</ListItemText>
+                                <ListItemText>{ru.assignments.editDetails}</ListItemText>
                             </MenuItem>
                             <MenuItem
                                 onClick={() => {
@@ -400,7 +402,7 @@ export default function AssignmentQuestionManager() {
                                 }}
                             >
                                 <ListItemIcon><DeleteForeverIcon fontSize='small' color='error' /></ListItemIcon>
-                                <ListItemText primaryTypographyProps={{ color: 'error.main' }}>Delete</ListItemText>
+                                <ListItemText primaryTypographyProps={{ color: 'error.main', sx: { whiteSpace: 'normal' } }}>{ru.assignments.delete}</ListItemText>
                             </MenuItem>
                         </Menu>
                     </Box>
@@ -414,7 +416,7 @@ export default function AssignmentQuestionManager() {
 
             {/* Preview dialog */}
             <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullScreen={useMediaQuery(theme.breakpoints.down('md'))} fullWidth maxWidth='lg'>
-                <DialogTitle>Preview Assignment as Student{previewAssignment?.title ? `: ${previewAssignment.title}` : ''}</DialogTitle>
+                <DialogTitle sx={{ whiteSpace: 'normal' }}>{previewAssignment?.title ? ru.assignments.previewTitle(previewAssignment.title) : ru.assignments.previewStudent}</DialogTitle>
                 <DialogContent dividers sx={{ p: 0 }}>
                     {previewLoading && <LinearProgress />}
                     {!previewLoading && (
@@ -424,7 +426,7 @@ export default function AssignmentQuestionManager() {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setPreviewOpen(false)}>Close</Button>
+                    <Button onClick={() => setPreviewOpen(false)} sx={{ whiteSpace: 'normal' }}>{ru.common.close}</Button>
                 </DialogActions>
             </Dialog>
 

@@ -17,7 +17,7 @@ import HeaderActionButton from '@/components/HeaderActionButton';
 import HeaderActions from '@/components/HeaderActions';
 import ResultsCharts from '@/components/ResultsCharts';
 import InstructorSubmissionPlayer from '@/features/instructor/InstructorSubmissionPlayer';
-import { formatDateTimeDDMMYYYYHHmm } from '@/lib/format';
+import { m as ru, uiError, statusLabel, formatDateTimeDDMMYYYYHHmm, formatNumber, formatDue } from '@/i18n';
 export default function SubmissionReview() {
     // Master: assignments (quizzes)
     const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -42,7 +42,7 @@ export default function SubmissionReview() {
     const [chartsAdvancedOpen, setChartsAdvancedOpen] = useState(false);
 
     // Helper to format grades consistently
-    const formatGrade = (g: number | null | undefined) => (typeof g === 'number' && isFinite(g) ? g.toFixed(2) : '—');
+    const formatGrade = (g: number | null | undefined) => (typeof g === 'number' && isFinite(g) ? formatNumber(g, 2) : '—');
 
     // Load assignments initially
     useEffect(() => {
@@ -54,7 +54,7 @@ export default function SubmissionReview() {
                 if (!res.ok) throw new Error(`Failed (${res.status})`);
                 const data = await res.json();
                 setAssignments(Array.isArray(data) ? data : []);
-            } catch (e: any) { setAError(e?.message || 'Failed to load quizzes'); } finally { setALoading(false); }
+            } catch (e: any) { setAError(uiError(e, ru.errors.loadQuizzes)); } finally { setALoading(false); }
         }
         void loadAssignments();
     }, [user?.token, authFetch]);
@@ -142,7 +142,7 @@ export default function SubmissionReview() {
             const attempts: QuestionSubmissionAttempt[] = await res.json();
             setHistoryByQId(m => ({ ...m, [qsId]: { open: true, loading: false, attempts } }));
         } catch (e: any) {
-            setHistoryByQId(m => ({ ...m, [qsId]: { open: true, loading: false, attempts: [], error: e?.message || 'Failed to load history' } }));
+            setHistoryByQId(m => ({ ...m, [qsId]: { open: true, loading: false, attempts: [], error: uiError(e, ru.errors.history) } }));
         }
     }
 
@@ -186,7 +186,7 @@ export default function SubmissionReview() {
 
     return (
         <PageCard
-            headerTitle={<Typography variant='subtitle1'>{selectedAssignment ? 'Submissions' : 'Submissions'}{selectedSubmissionId ? '' : ''}</Typography>}
+            headerTitle={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{ru.submissionsReview.title}</Typography>}
             headerProps={{ height: 56 }}
             headerActionsVariant='plain'
             headerActions={
@@ -194,22 +194,22 @@ export default function SubmissionReview() {
                     actions={[
                         selectedSubmissionId ? {
                             key: 'close-viewer',
-                            label: 'Close viewer',
-                            ariaLabel: 'Close viewer',
+                            label: ru.submissionsReview.close,
+                            ariaLabel: ru.submissionsReview.close,
                             onClick: () => setSelectedSubmissionId(null),
                             icon: <CloseFullscreenIcon fontSize='small' />,
                         } : null,
                         selectedAssignment && !selectedSubmissionId ? {
                             key: 'back',
-                            label: 'Back to quizzes',
-                            ariaLabel: 'Back to quizzes',
+                            label: ru.submissionsReview.back,
+                            ariaLabel: ru.submissionsReview.back,
                             onClick: () => setSelectedAssignment(null),
                             icon: <ArrowBackIcon fontSize='small' />,
                         } : null,
                         {
                             key: 'refresh',
-                            label: 'Refresh',
-                            ariaLabel: 'Refresh',
+                            label: ru.submissionsReview.refresh,
+                            ariaLabel: ru.submissionsReview.refresh,
                             onClick: () => { if (!selectedAssignment) { setSelectedAssignment(null); } else { setSelectedSubmissionId(null); } },
                             icon: <RefreshIcon fontSize='small' />,
                         }
@@ -220,7 +220,7 @@ export default function SubmissionReview() {
             {!selectedAssignment ? (
                 <CardContent>
                     <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <TextField variant='outlined' size='small' placeholder='Search by title or course' value={search} onChange={e => setSearch(e.target.value)} />
+                        <TextField variant='outlined' size='small' placeholder={ru.submissionsReview.search} value={search} onChange={e => setSearch(e.target.value)} sx={{ minWidth: { xs: '100%', sm: 280 }, flex: '1 1 220px' }} />
                         {aError && <Typography variant='caption' color='error'>{aError}</Typography>}
                     </Box>
                     <TilesGrid>
@@ -231,29 +231,29 @@ export default function SubmissionReview() {
                                     <CardContent sx={{ pt: 0, display: 'grid', gap: 1 }}>
                                         <Box sx={{ display: 'flex', gap: .75, flexWrap: 'wrap' }}>
                                             <DifficultyChip value={a.difficulty} />
-                                            <Chip size='small' variant='outlined' label={`${a.points} pts`} />
-                                            <Chip size='small' variant='outlined' label={`Subs: ${submissionCounts[a.id] || 0}`} />
+                                            <Chip size='small' variant='outlined' label={ru.common.pts(a.points)} />
+                                            <Chip size='small' variant='outlined' label={ru.submissionsReview.subs(submissionCounts[a.id] || 0)} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
                                         </Box>
-                                        <Typography variant='caption' color='text.secondary'>Due: {a.due || '—'}</Typography>
+                                        <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.common.dueOn(formatDue(a.due) || '—')}</Typography>
                                     </CardContent>
                                 </CardActionArea>
                             </Card>
                         ))}
                     </TilesGrid>
                     {!filteredAssignments.length && !aLoading && (
-                        <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>No quizzes found.</Typography>
+                        <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>{ru.submissionsReview.none}</Typography>
                     )}
                     {aLoading && (
-                        <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>Loading…</Typography>
+                        <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>{ru.submissionsReview.loading}</Typography>
                     )}
                 </CardContent>
             ) : (
                 <CardContent>
-                    <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 1 }}>{selectedAssignment.course} • Due {selectedAssignment.due} • Attempts {selectedAssignment.attemptsAllowed}</Typography>
+                    <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 1, whiteSpace: 'normal' }}>{`${selectedAssignment.course} · ${ru.common.dueOn(formatDue(selectedAssignment.due) || '—')} · ${ru.common.attemptsCount(selectedAssignment.attemptsAllowed)}`}</Typography>
                     {!selectedSubmissionId && (
                         <>
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant='subtitle1' sx={{ mb: 1 }}>Assignment Overview</Typography>
+                                <Typography variant='subtitle1' sx={{ mb: 1, whiteSpace: 'normal' }}>{ru.submissionsReview.overview}</Typography>
                                 <ResultsCharts
                                     results={rows.map(r => ({ Grade: (r as any).grade ?? 0, Status: (r as any).status }))}
                                     loadAttemptsForCohort={selectedAssignment ? { assignmentId: selectedAssignment.id, token: user?.token } : undefined}
@@ -265,11 +265,11 @@ export default function SubmissionReview() {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell>Student</TableCell>
-                                            <TableCell>Date</TableCell>
-                                            <TableCell>Grade</TableCell>
-                                            <TableCell>Status</TableCell>
-                                            <TableCell>Actions</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.common.student}</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.common.date}</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.common.grade}</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.common.status}</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'normal' }}>{ru.common.actions}</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -281,18 +281,19 @@ export default function SubmissionReview() {
                                                 <TableCell>{rosterMap[s.student] || s.student}</TableCell>
                                                 <TableCell>{formatDateTimeDDMMYYYYHHmm(s.date)}</TableCell>
                                                 <TableCell>{formatGrade((s as any).grade)}</TableCell>
-                                                <TableCell>{s.status}</TableCell>
-                                                <TableCell>
+                                                <TableCell sx={{ whiteSpace: 'normal' }}>{statusLabel(s.status)}</TableCell>
+                                                <TableCell sx={{ whiteSpace: 'normal' }}>
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75 }}>
                                                     {user?.role === 'instructor' && (
-                                                        <Button size='small' sx={{ ml: 0 }} variant='contained' disabled={gradingSub[s.id]?.status === 'loading'} onClick={async (e) => {
+                                                        <Button size='small' sx={{ ml: 0, whiteSpace: 'normal' }} variant='contained' disabled={gradingSub[s.id]?.status === 'loading'} onClick={async (e) => {
                                                             e.stopPropagation();
-                                                            setGradingSub(m => ({ ...m, [s.id]: { status: 'loading', message: 'Starting grader…' } }));
+                                                            setGradingSub(m => ({ ...m, [s.id]: { status: 'loading', message: ru.submissionsReview.starting } }));
                                                             try {
                                                                 const start = await authFetch('/api/grade-submission', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ submissionId: s.id, async: true }) });
-                                                                if (!start.ok) throw new Error('Failed to start grading');
+                                                                if (!start.ok) throw new Error(uiError('Failed to start grading', ru.errors.startGrading));
                                                                 const started = await start.json();
                                                                 const jobId: string | undefined = started?.jobId;
-                                                                if (!jobId) throw new Error('No job id');
+                                                                if (!jobId) throw new Error(uiError('No job id', ru.errors.noJob));
                                                                 const deadline = Date.now() + 120_000;
                                                                 let final: any = null;
                                                                 while (Date.now() < deadline) {
@@ -301,30 +302,31 @@ export default function SubmissionReview() {
                                                                     if (!poll.ok) continue;
                                                                     const body = await poll.json();
                                                                     if (body.status === 'succeeded') { final = body.result; break; }
-                                                                    if (body.status === 'failed') { throw new Error(body.error || 'Grading failed'); }
-                                                                    setGradingSub(m => ({ ...m, [s.id]: { status: 'loading', message: 'Grading in progress…' } }));
+                                                                    if (body.status === 'failed') { throw new Error(uiError(body.error, ru.errors.gradingFailed)); }
+                                                                    setGradingSub(m => ({ ...m, [s.id]: { status: 'loading', message: ru.submissionsReview.gradingProgress } }));
                                                                 }
                                                                 if (!final) {
-                                                                    setGradingSub(m => ({ ...m, [s.id]: { status: 'success', message: 'Still processing in background…' } }));
+                                                                    setGradingSub(m => ({ ...m, [s.id]: { status: 'success', message: ru.submissionsReview.stillProcessing } }));
                                                                     return;
                                                                 }
                                                                 setRows(r => r.map(row => row.id === s.id ? { ...row, grade: (final as any)?.submission?.grade, status: (final as any)?.status || (row as any).status } as any : row));
                                                                 await loadQuestions(s.id);
-                                                                setGradingSub(m => ({ ...m, [s.id]: { status: 'success', message: (final as any)?.status === 'Needs review' ? 'Completed with issues.' : 'Auto-grading complete.' } }));
+                                                                setGradingSub(m => ({ ...m, [s.id]: { status: 'success', message: (final as any)?.status === 'Needs review' ? ru.submissionsReview.completedIssues : ru.submissionsReview.autoComplete } }));
                                                             } catch (e: any) {
-                                                                setGradingSub(m => ({ ...m, [s.id]: { status: 'error', message: e?.message || 'Failed' } }));
+                                                                setGradingSub(m => ({ ...m, [s.id]: { status: 'error', message: uiError(e, ru.errors.gradingFailed) } }));
                                                             }
-                                                        }}>Auto-Grade</Button>
+                                                        }}>{ru.submissionsReview.autoGrade}</Button>
                                                     )}
-                                                    {user?.role === 'instructor' && gradingSub[s.id]?.status !== 'idle' && <Typography variant='caption' color={gradingSub[s.id]?.status === 'error' ? 'error' : 'text.secondary'} sx={{ ml: 1 }}>{gradingSub[s.id]?.message}</Typography>}
+                                                    {user?.role === 'instructor' && gradingSub[s.id]?.status !== 'idle' && <Typography variant='caption' color={gradingSub[s.id]?.status === 'error' ? 'error' : 'text.secondary'} sx={{ whiteSpace: 'normal' }}>{gradingSub[s.id]?.message}</Typography>}
+                                                    </Box>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                         {!rows.length && !loading && (
-                                            <TableRow><TableCell colSpan={5}>No submissions for this quiz.</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={5} sx={{ whiteSpace: 'normal' }}>{ru.submissionsReview.noSubs}</TableCell></TableRow>
                                         )}
                                         {loading && (
-                                            <TableRow><TableCell colSpan={5}>Loading…</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={5}>{ru.submissionsReview.loading}</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>)}
@@ -332,7 +334,7 @@ export default function SubmissionReview() {
                     )}
                     {selectedSubmissionId && (() => {
                         const s = rows.find(r => r.id === selectedSubmissionId) as SubmissionWithQuestions | undefined;
-                        if (!s) return <Typography variant='body2'>Submission not found.</Typography>;
+                        if (!s) return <Typography variant='body2'>{ru.submissionsReview.notFound}</Typography>;
                         return (
                             <InstructorSubmissionPlayer
                                 assignmentId={selectedAssignment?.id || null}

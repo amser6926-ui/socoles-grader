@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Chip } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { difficultyLabel } from '@/i18n';
 
 export interface DifficultyChipProps {
     value: string; // Beginner | Intermediate | Advanced (case-insensitive)
@@ -28,7 +29,7 @@ export const DifficultyChip: React.FC<DifficultyChipProps> = ({ value, size = 's
     return (
         <Chip
             size={size}
-            label={value}
+            label={difficultyLabel(value)}
             sx={{
                 fontWeight: 500,
                 textTransform: 'capitalize',

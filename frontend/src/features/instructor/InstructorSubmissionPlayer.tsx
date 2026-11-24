@@ -13,7 +13,7 @@ import DifficultyChip from '@/components/DifficultyChip';
 import type { AssignmentWithQuestions, QuestionSubmission, QuestionSubmissionAttempt } from '@/lib/types';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useRosterMap } from '@/lib/useRosterMap';
-import { formatDateTimeDDMMYYYYHHmm } from '@/lib/format';
+import { m as ru, uiError, formatDateTimeDDMMYYYYHHmm } from '@/i18n';
 
 interface Props {
     assignmentId: string | null;
@@ -110,7 +110,7 @@ export default function InstructorSubmissionPlayer({ assignmentId, submission, o
                 // default to final attempt on initial load
                 setAttemptTab(attempts.length ? attempts.length - 1 : 0);
             } catch (e: any) {
-                setHistoryMap(m => ({ ...m, [qid]: { loading: false, attempts: [], error: e?.message || 'Failed' } }));
+                setHistoryMap(m => ({ ...m, [qid]: { loading: false, attempts: [], error: uiError(e, ru.errors.history) } }));
                 setAttemptTab(0);
             }
         })();
@@ -132,25 +132,25 @@ export default function InstructorSubmissionPlayer({ assignmentId, submission, o
     return (
         <Card sx={{ display: 'flex', flexDirection: 'column' }}>
             <CardHeader
-                title={<Typography variant='subtitle1'>{assignment?.title || 'Assignment'}</Typography>}
-                subheader={<Typography variant='caption' color='text.secondary'>Question {idx + 1} of {total} • {rosterMap[submission.student] || submission.student}</Typography>}
+                title={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{assignment?.title || ru.common.assignment}</Typography>}
+                subheader={<Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.player.questionOf(idx + 1, total)} · {rosterMap[submission.student] || submission.student}</Typography>}
             />
             <CardContent sx={{ pt: 0, display: 'grid', gap: 2, gridTemplateColumns: { lg: '1fr 340px' } }}>
                 {/* meta moved to CardHeader subheader */}
                 <Box>
-                    <Typography variant='subtitle2' sx={{ mb: .5 }}>{activeQuestion?.title || activeQuestion?.questionId}</Typography>
+                    <Typography variant='subtitle2' sx={{ mb: .5, whiteSpace: 'normal' }}>{activeQuestion?.title || activeQuestion?.questionId}</Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                         {(() => {
                             const meta = assignment?.questions?.find(q => q.id === (activeQuestion as any)?.questionId);
                             return (
                                 <>
                                     {!!(meta?.difficulty || activeQuestion?.status) && <DifficultyChip value={meta?.difficulty || activeQuestion?.status} />}
-                                    <Chip size='small' variant='outlined' label={`${meta?.pointsOverride != null ? meta.pointsOverride : meta?.maxPoints || '—'} pts`} />
+                                    <Chip size='small' variant='outlined' label={ru.common.pts(meta?.pointsOverride != null ? meta.pointsOverride : meta?.maxPoints || '—')} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
                                 </>
                             );
                         })()}
-                        {typeof currentAttempt?.attempt === 'number' && <Chip size='small' label={`Attempt ${String(currentAttempt.attempt)}`} />}
-                        {((currentAttempt as any)?.manual || currentAttempt?.status === 'Manual') && <Chip size='small' color='secondary' label='Manual override' />}
+                        {typeof currentAttempt?.attempt === 'number' && <Chip size='small' label={ru.common.attemptN(currentAttempt.attempt)} />}
+                        {((currentAttempt as any)?.manual || currentAttempt?.status === 'Manual') && <Chip size='small' color='secondary' label={ru.player.manualOverride} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />}
                     </Box>
                     {(() => {
                         const qid = activeQuestion?.questionId || '';
@@ -158,10 +158,10 @@ export default function InstructorSubmissionPlayer({ assignmentId, submission, o
                         const loading = !!loadingQ[qid];
                         return (
                             <Box sx={{ mb: 1 }}>
-                                {loading && <Typography variant='caption' color='text.secondary'>Loading question…</Typography>}
+                                {loading && <Typography variant='caption' color='text.secondary'>{ru.player.loadingQuestion}</Typography>}
                                 {!loading && (
                                     <PromptWithHint
-                                        prompt={String(detail?.prompt || 'No prompt provided.')}
+                                        prompt={String(detail?.prompt || ru.common.noPrompt)}
                                         hint={String(detail?.hints || '')}
                                         showHint={false}
                                         onToggle={() => { }}
@@ -173,8 +173,8 @@ export default function InstructorSubmissionPlayer({ assignmentId, submission, o
                         );
                     })()}
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1 }}>
-                        <Tab label='Schema' />
-                        <Tab label='Editor' />
+                        <Tab label={ru.common.schema} sx={{ whiteSpace: 'normal' }} />
+                        <Tab label={ru.common.editor} sx={{ whiteSpace: 'normal' }} />
                     </Tabs>
                     {tab === 0 && (
                         <Box sx={{ color: 'text.secondary', fontSize: 14 }}>
@@ -182,7 +182,7 @@ export default function InstructorSubmissionPlayer({ assignmentId, submission, o
                         </Box>
                     )}
                     {tab === 1 && (
-                        <SqlEditor value={(currentAttempt?.sql ?? activeQuestion?.sql) || ''} onChange={() => { }} readOnly minRows={10} placeholder='-- no SQL' />
+                        <SqlEditor value={(currentAttempt?.sql ?? activeQuestion?.sql) || ''} onChange={() => { }} readOnly minRows={10} placeholder={ru.reviewStudent.noSql} />
                     )}
                 </Box>
                 <Box sx={{ display: 'grid', gap: 2 }}>
@@ -197,34 +197,34 @@ export default function InstructorSubmissionPlayer({ assignmentId, submission, o
                                 absent: currentAttempt?.rubric?.absent
                             }} />
                             <Box sx={{ mt: 2 }}>
-                                <Typography variant='body2' color='text.secondary'>Feedback</Typography>
-                                <FeedbackList feedback={Array.isArray(currentAttempt?.feedback) ? currentAttempt?.feedback : []} emptyText='No feedback.' />
+                                <Typography variant='body2' color='text.secondary'>{ru.player.feedback}</Typography>
+                                <FeedbackList feedback={Array.isArray(currentAttempt?.feedback) ? currentAttempt?.feedback : []} emptyText={ru.player.noFeedback} />
                             </Box>
                             <Divider sx={{ my: 1.5 }} />
                             <Box>
-                                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>Attempts</Typography>
+                                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>{ru.common.attempts}</Typography>
                                 {(() => {
                                     const qid = activeQuestion?.questionId || '';
                                     const state = historyMap[qid];
                                     if (!state || state.loading) {
-                                        return <Typography variant='caption' color='text.secondary' sx={{ display: 'inline-flex', alignItems: 'center', gap: .75 }}><CircularProgress size={12} /> Loading…</Typography>;
+                                        return <Typography variant='caption' color='text.secondary' sx={{ display: 'inline-flex', alignItems: 'center', gap: .75 }}><CircularProgress size={12} /> {ru.common.loading}</Typography>;
                                     }
                                     const attempts = [...(state.attempts || [])].sort((a, b) => a.attempt - b.attempt);
-                                    if (!attempts.length) return <Typography variant='caption' color='text.secondary'>No attempts yet.</Typography>;
+                                    if (!attempts.length) return <Typography variant='caption' color='text.secondary'>{ru.player.noAttempts}</Typography>;
                                     const current = attempts[Math.min(Math.max(0, attemptTab), attempts.length - 1)];
                                     return (
                                         <Box>
                                             <Tabs value={Math.min(attemptTab, attempts.length - 1)} onChange={(_, v) => setAttemptTab(v)} variant='scrollable' scrollButtons='auto' sx={{ mb: 1 }}>
                                                 {attempts.map((a, i) => (
-                                                    <Tab key={a.id} label={`Attempt ${a.attempt}`} value={i} />
+                                                    <Tab key={a.id} label={ru.common.attemptN(a.attempt)} value={i} />
                                                 ))}
                                             </Tabs>
                                             <Box sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: .5 }}>
-                                                    <Typography variant='subtitle2'>Attempt {current.attempt}</Typography>
+                                                    <Typography variant='subtitle2'>{ru.common.attemptN(current.attempt)}</Typography>
                                                     <Typography variant='caption' color='text.secondary'>{current.createdAt ? formatDateTimeDDMMYYYYHHmm(current.createdAt) : ''}</Typography>
                                                 </Box>
-                                                <Typography variant='caption' color='text.secondary'>Select a tab above to switch attempts.</Typography>
+                                                <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.player.selectAttempt}</Typography>
                                             </Box>
                                         </Box>
                                     );
@@ -233,21 +233,21 @@ export default function InstructorSubmissionPlayer({ assignmentId, submission, o
                         </CardContent>
                     </Card>
                     <Box sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                        <Typography variant='caption' color='text.secondary'>Submission {String(submission.id).substring(0, 8)}</Typography>
+                        <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.player.submission(String(submission.id).substring(0, 8))}</Typography>
                     </Box>
                     <Card variant='outlined'>
                         <CardContent>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
-                                <Button size='small' startIcon={<ArrowBackIcon />} disabled={idx === 0} onClick={() => setActiveIdx(i => Math.max(i - 1, 0))}>Previous</Button>
-                                <Button size='small' endIcon={<ArrowForwardIcon />} disabled={idx === (total - 1)} onClick={() => setActiveIdx(i => Math.min(i + 1, total - 1))}>Next</Button>
+                                <Button size='small' startIcon={<ArrowBackIcon />} disabled={idx === 0} onClick={() => setActiveIdx(i => Math.max(i - 1, 0))}>{ru.common.previous}</Button>
+                                <Button size='small' endIcon={<ArrowForwardIcon />} disabled={idx === (total - 1)} onClick={() => setActiveIdx(i => Math.min(i + 1, total - 1))}>{ru.common.next}</Button>
                             </Box>
-                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1 }}>Navigate questions.</Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1, whiteSpace: 'normal' }}>{ru.player.navigate}</Typography>
                         </CardContent>
                     </Card>
                 </Box>
             </CardContent>
             <CardActions sx={{ justifyContent: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant='caption' color='text.secondary'>Progress {idx + 1}/{total} • Read-only</Typography>
+                <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{`${ru.player.progress(idx + 1, total)}${ru.player.readOnly}`}</Typography>
             </CardActions>
         </Card>
     );

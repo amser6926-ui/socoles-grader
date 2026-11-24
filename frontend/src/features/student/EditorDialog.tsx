@@ -5,6 +5,7 @@ import SendIcon from '@mui/icons-material/Send';
 import { useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql as sqlLang } from '@codemirror/lang-sql';
+import { displayFeedback, formatNumber, m } from '@/i18n';
 
 export default function EditorDialog({
     open, setOpen,
@@ -28,18 +29,18 @@ export default function EditorDialog({
     }
     return (
         <Dialog open={open} onClose={() => setOpen(false)} maxWidth="lg" fullWidth>
-            <DialogTitle>Answer Editor</DialogTitle>
+            <DialogTitle>{m.editor.title}</DialogTitle>
             <DialogContent dividers>
                 <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { lg: '1fr 340px' } }}>
                     <Box>
                         <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1 }}>
-                            <Tab label="Schema" />
-                            <Tab label="Editor" />
+                            <Tab label={m.common.schema} />
+                            <Tab label={m.common.editor} />
                         </Tabs>
 
                         {tab === 0 && (
                             <Box sx={{ color: 'text.secondary', fontSize: 14 }}>
-                                <p>Tables available:</p>
+                                <p>{m.editor.tables}</p>
                                 <ul style={{ marginTop: 8, paddingLeft: 18 }}>
                                     <li><code>Book(isbn, title, author)</code></li>
                                     <li><code>Copy(isbn, serial_number, weight, bookcase)</code></li>
@@ -48,26 +49,26 @@ export default function EditorDialog({
                         )}
 
                         {tab === 1 && (
-                            <SqlEditor value={sql} onChange={setSql} placeholder={'-- Write your SQL here\nSELECT * FROM Book;'} />
+                            <SqlEditor value={sql} onChange={setSql} placeholder={`${m.player.sqlPlaceholder}\nSELECT * FROM Book;`} />
                         )}
                     </Box>
 
                     <Box sx={{ display: 'grid', gap: 2 }}>
                         <Card>
-                            <CardHeader title={<Typography variant="subtitle1">Auto-Grader</Typography>} />
+                            <CardHeader title={<Typography variant="subtitle1">{m.editor.autoGrader}</Typography>} />
                             <CardContent>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                                     <Button onClick={onRun} disabled={grading} startIcon={<PlayArrowIcon />} variant="contained">
-                                        {grading ? 'Grading…' : 'Run'}
+                                        {grading ? m.common.grading : m.common.run}
                                     </Button>
-                                    <Button startIcon={<SendIcon />} variant="outlined">Submit</Button>
+                                    <Button startIcon={<SendIcon />} variant="outlined">{m.common.submit}</Button>
                                 </Box>
 
                                 <Box sx={{ mt: 2 }}>
-                                    <Typography variant="body2" color="text.secondary">Grade</Typography>
+                                    <Typography variant="body2" color="text.secondary">{m.common.grade}</Typography>
                                     {/* Format grade to two decimals and adjust denominator for ≤ 1 */}
                                     {(() => {
-                                        const formatted = (typeof grade === 'number' && isFinite(grade)) ? grade.toFixed(2) : '—';
+                                        const formatted = (typeof grade === 'number' && isFinite(grade)) ? formatNumber(grade, 2) : '—';
                                         const denom = (typeof grade === 'number') ? (grade <= 1 ? 1 : 10) : null;
                                         return (
                                             <Typography variant="h4" sx={{ lineHeight: 1 }}>
@@ -78,15 +79,15 @@ export default function EditorDialog({
                                 </Box>
 
                                 <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
-                                    <Typography variant="body2" color="text.secondary">Rubric</Typography>
+                                    <Typography variant="body2" color="text.secondary">{m.rubric.title}</Typography>
                                     {(['syntax', 'semantics', 'results'] as const).map(key => {
                                         const val = rubric[key];
                                         const absent = !!rubric.absent?.[key];
                                         const pct = typeof val === 'number' ? Math.round(val * 100) : 0;
-                                        const label = key.charAt(0).toUpperCase() + key.slice(1);
+                                        const label = key === 'syntax' ? m.rubric.syntax : key === 'semantics' ? m.rubric.semantics : m.rubric.results;
                                         return (
                                             <Box key={key} sx={{ opacity: absent ? 0.35 : 1 }}>
-                                                <Typography variant="caption">{label} {absent ? '(n/a)' : `(${pct}%)`}</Typography>
+                                                <Typography variant="caption">{label} {absent ? m.rubric.na : `(${formatNumber(pct, 0)}%)`}</Typography>
                                                 <LinearProgress variant="determinate" value={absent ? 0 : pct} />
                                             </Box>
                                         );
@@ -96,14 +97,14 @@ export default function EditorDialog({
                         </Card>
 
                         <Card>
-                            <CardHeader title={<Typography variant="subtitle1">Feedback</Typography>} />
+                            <CardHeader title={<Typography variant="subtitle1">{m.common.feedback}</Typography>} />
                             <CardContent>
                                 {feedback?.length ? (
                                     <ul style={{ paddingLeft: 18, margin: 0 }}>
-                                        {feedback.map((f, i) => <li key={i}><Typography variant="body2">{f}</Typography></li>)}
+                                        {feedback.map((f, i) => <li key={i}><Typography variant="body2">{displayFeedback(f)}</Typography></li>)}
                                     </ul>
                                 ) : (
-                                    <Typography variant="body2" color="text.secondary">Run the auto-grader to see comments.</Typography>
+                                    <Typography variant="body2" color="text.secondary">{m.editor.runToSee}</Typography>
                                 )}
                             </CardContent>
                         </Card>
@@ -111,9 +112,9 @@ export default function EditorDialog({
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Typography variant="caption" color="text.secondary">Your instructor may allow multiple submissions. Best score counts.</Typography>
+                <Typography variant="caption" color="text.secondary">{m.editor.multi}</Typography>
                 <Box sx={{ flexGrow: 1 }} />
-                <Button onClick={() => setOpen(false)}>Close</Button>
+                <Button onClick={() => setOpen(false)}>{m.common.close}</Button>
             </DialogActions>
         </Dialog>
     );
