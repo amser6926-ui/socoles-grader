@@ -16,6 +16,7 @@ import GradingOptions from '@/features/instructor/GradingOptions';
 import type { GradingOptions as GradingOptionsType } from '@/lib/types';
 import PageCard from '@/components/PageCard';
 import HeaderActions from '@/components/HeaderActions';
+import { m as ru, uiError } from '@/i18n';
 
 export default function BatchGrader() {
     const { authFetch } = useAuth();
@@ -106,7 +107,7 @@ export default function BatchGrader() {
             // Ensure an SQL file is always sent. If missing, warn and optionally create a dummy file.
             let initFileToSend: File | undefined = initSql || undefined;
             if (!initFileToSend) {
-                const proceed = typeof window !== 'undefined' ? window.confirm('No init SQL provided. The backend expects an .sql file. Continue with an empty SQL file?') : true;
+                const proceed = typeof window !== 'undefined' ? window.confirm(ru.batch.confirmEmpty) : true;
                 if (!proceed) { setBusy(false); return; }
                 initFileToSend = new File([''], 'empty.sql', { type: 'text/sql' });
             }
@@ -125,7 +126,7 @@ export default function BatchGrader() {
                 setRawCsv(raw || ''); setResults(payload as any[]);
             }
             setShowSuccess(true);
-        } catch (e: any) { setError(String(e.message || e)); } finally { setBusy(false); }
+        } catch (e: any) { setError(uiError(e, ru.errors.gradingFailed)); } finally { setBusy(false); }
     }
 
     function downloadCsv() {
@@ -168,16 +169,16 @@ export default function BatchGrader() {
             actions={[
                 {
                     key: 'reset',
-                    label: 'Reset batch grader',
-                    ariaLabel: 'Reset',
+                    label: ru.batch.reset,
+                    ariaLabel: ru.batch.resetShort,
                     onClick: resetAll,
                     disabled: busy,
                     icon: <RestartAltIcon fontSize='small' />,
                 },
                 {
                     key: 'run',
-                    label: 'Run grader',
-                    ariaLabel: 'Run grader',
+                    label: ru.batch.run,
+                    ariaLabel: ru.batch.run,
                     onClick: runBatch,
                     disabled: !canRun,
                     icon: <PlayArrowIcon fontSize='small' />,
@@ -189,11 +190,11 @@ export default function BatchGrader() {
 
     return (
         <>
-            <PageCard headerTitle='Batch Grader' headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain' loadingProgress={busy}>
-                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Chip size="small" label={allFilesReady ? 'Files ready' : 'Waiting for files'} color={allFilesReady ? 'success' : 'default'} />
-                    <Chip size="small" label={selectedQuestionNumber ? `Q ${selectedQuestionNumber}` : 'No question selected'} color={selectedQuestionNumber ? 'info' : 'default'} />
-                    {results.length > 0 && <Chip size="small" label={`${results.length} results`} />}
+            <PageCard headerTitle={ru.batch.title} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain' loadingProgress={busy}>
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', '& .MuiChip-label': { whiteSpace: 'normal' } }}>
+                    <Chip size="small" label={allFilesReady ? ru.batch.filesReady : ru.batch.waiting} color={allFilesReady ? 'success' : 'default'} sx={{ height: 'auto' }} />
+                    <Chip size="small" label={selectedQuestionNumber ? ru.batch.question(selectedQuestionNumber) : ru.batch.noQuestion} color={selectedQuestionNumber ? 'info' : 'default'} sx={{ height: 'auto' }} />
+                    {results.length > 0 && <Chip size="small" label={ru.batch.results(results.length)} sx={{ height: 'auto' }} />}
                 </Box>
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '380px 1fr' }, gap: 2, alignItems: 'start' }}>
@@ -201,16 +202,16 @@ export default function BatchGrader() {
                     <Box ref={leftColumnRef} sx={{ position: { lg: 'sticky' }, top: { lg: 16 }, alignSelf: 'start' }}>
                         <CardContent>
                             <Stack spacing={1.5}>
-                                <FileDrop label="Student answers" accept=".csv" help={`Headers: ${requiredHeaders.join(', ')}`} onFile={onStudents} />
-                                <FileDrop label="Reference statements" accept=".csv" help="1 column, no header; one statement per row." onFile={onRefs} />
-                                <FileDrop label="Init database" accept=".sql" help="Optional for DQL-only grading." onFile={onInit} />
+                                <FileDrop label={ru.batch.studentsFile} accept=".csv" help={ru.batch.studentsHelp} onFile={onStudents} />
+                                <FileDrop label={ru.batch.refsFile} accept=".csv" help={ru.batch.refsHelp} onFile={onRefs} />
+                                <FileDrop label={ru.batch.initFile} accept=".sql" help={ru.batch.initHelp} onFile={onInit} />
                             </Stack>
-                            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1, '& .MuiChip-label': { whiteSpace: 'normal' } }}>
                                 {studentPreview.rows.length > 0 && (
-                                    <Chip size="small" color="default" label={`Students: ${studentPreview.rows.length} rows`} />
+                                    <Chip size="small" color="default" label={ru.batch.studentsRows(studentPreview.rows.length)} sx={{ height: 'auto' }} />
                                 )}
                                 {refPreview.rows.length > 0 && (
-                                    <Chip size="small" color="default" label={`Refs: ${refPreview.rows.length}`} />
+                                    <Chip size="small" color="default" label={ru.batch.refsRows(refPreview.rows.length)} sx={{ height: 'auto' }} />
                                 )}
                                 {!!initSql && <Chip size="small" label={initSql.name} />}
                             </Box>
@@ -221,7 +222,7 @@ export default function BatchGrader() {
                         </CardContent>
 
                         <Card variant="outlined">
-                            <CardHeader titleTypographyProps={{ fontWeight: 700 }} title={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TuneIcon fontSize="small" />Grading Options</Box>} />
+                            <CardHeader titleTypographyProps={{ fontWeight: 700, sx: { whiteSpace: 'normal' } }} title={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', whiteSpace: 'normal' }}><TuneIcon fontSize="small" />{ru.batch.options}</Box>} />
                             <CardContent>
                                 <GradingOptions
                                     options={options}
@@ -232,8 +233,8 @@ export default function BatchGrader() {
                                     showHeader={false}
                                 />
                                 {(!isOptionsValid(options) || !selectedQuestionNumber) && (
-                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                                        Complete all grading options and select a question number to enable grading.
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', whiteSpace: 'normal' }}>
+                                        {ru.batch.needOptions}
                                     </Typography>
                                 )}
                             </CardContent>
@@ -243,20 +244,20 @@ export default function BatchGrader() {
                     {/* Right column: Results */}
                     <Box>
                         <Card variant="outlined" sx={{ mb: 2 }}>
-                            <CardHeader titleTypographyProps={{ fontWeight: 700 }} title={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><BarChartIcon fontSize="small" />Overview</Box>} subheader={results.length ? `Graded ${results.length} rows` : 'No results yet'} />
+                            <CardHeader titleTypographyProps={{ fontWeight: 700, sx: { whiteSpace: 'normal' } }} subheaderTypographyProps={{ sx: { whiteSpace: 'normal' } }} title={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', whiteSpace: 'normal' }}><BarChartIcon fontSize="small" />{ru.batch.overview}</Box>} subheader={results.length ? ru.batch.graded(results.length) : ru.batch.noResults} />
                             {busy && <LinearProgress />}
                             <CardContent>
                                 {results.length ? (
                                     <ResultsCharts results={results} />
                                 ) : (
-                                    <Typography variant="body2" color="text.secondary">Upload files, configure options, and run the grader to see charts.</Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.batch.uploadHint}</Typography>
                                 )}
                             </CardContent>
                         </Card>
 
                         <Card variant="outlined">
-                            <CardHeader titleTypographyProps={{ fontWeight: 700 }} title={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TableChartIcon fontSize="small" />Results</Box>} action={
-                                <Button size="small" variant="outlined" onClick={downloadCsv} disabled={!results.length}>Export CSV</Button>
+                            <CardHeader titleTypographyProps={{ fontWeight: 700, sx: { whiteSpace: 'normal' } }} title={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', whiteSpace: 'normal' }}><TableChartIcon fontSize="small" />{ru.batch.resultsTab}</Box>} action={
+                                <Button size="small" variant="outlined" onClick={downloadCsv} disabled={!results.length} sx={{ whiteSpace: 'normal' }}>{ru.batch.export}</Button>
                             } />
                             {busy && <LinearProgress />}
                             <CardContent>
@@ -275,7 +276,7 @@ export default function BatchGrader() {
             </Snackbar>
             <Snackbar open={showSuccess} autoHideDuration={3000} onClose={() => setShowSuccess(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
                 <Alert onClose={() => setShowSuccess(false)} severity="success" sx={{ width: '100%' }}>
-                    Grading complete{results.length ? ` — ${results.length} rows` : ''}.
+                    {ru.batch.complete(results.length)}
                 </Alert>
             </Snackbar>
         </>

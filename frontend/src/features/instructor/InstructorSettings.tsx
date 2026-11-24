@@ -36,6 +36,7 @@ import PageCard from '@/components/PageCard';
 import HeaderActions from '@/components/HeaderActions';
 import HeaderOverflowMenu from '@/components/HeaderOverflowMenu';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m as ru, uiError } from '@/i18n';
 
 type Settings = {
     courseName: string;
@@ -116,10 +117,10 @@ export default function InstructorSettings() {
             const next = { ...parsed, name: accountName };
             localStorage.setItem('auth.current', JSON.stringify(next));
             if (user) setUser({ ...user, name: accountName });
-            setNote({ type: 'success', msg: 'Display name updated.' });
+            setNote({ type: 'success', msg: ru.settings.nameUpdated });
             setNameDirty(false);
-        } catch {
-            setNote({ type: 'error', msg: 'Failed to update display name.' });
+        } catch (e) {
+            setNote({ type: 'error', msg: uiError(e, ru.settings.nameFailed) });
         }
     }
     const [note, setNote] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
@@ -155,7 +156,7 @@ export default function InstructorSettings() {
                 body: JSON.stringify({ courseId })
             });
             if (res.ok) {
-                setNote({ type: 'success', msg: 'Default course updated.' });
+                setNote({ type: 'success', msg: ru.settings.courseUpdated });
                 await refreshCourses();
                 // Refresh settings so the course header updates immediately.
                 const sRes = await authFetch('/api/instructor/settings', { method: 'GET' });
@@ -171,17 +172,17 @@ export default function InstructorSettings() {
                     });
                 }
             } else {
-                setNote({ type: 'error', msg: 'Failed to update default course.' });
+                setNote({ type: 'error', msg: uiError('Failed to update default course.', ru.settings.courseUpdateFailed) });
             }
-        } catch {
-            setNote({ type: 'error', msg: 'Failed to update default course.' });
+        } catch (e) {
+            setNote({ type: 'error', msg: uiError(e, ru.settings.courseUpdateFailed) });
         }
     }, [authFetch, refreshCourses]);
 
     const createCourse = useCallback(async () => {
         const name = newCourseName.trim();
         if (!name) {
-            setNote({ type: 'error', msg: 'Course name is required.' });
+            setNote({ type: 'error', msg: ru.settings.courseNameRequired });
             return;
         }
         setCreatingCourse(true);
@@ -194,14 +195,14 @@ export default function InstructorSettings() {
             if (res.ok) {
                 setNewCourseName('');
                 setNewEnrollmentCode('');
-                setNote({ type: 'success', msg: 'Course created (set as default).' });
+                setNote({ type: 'success', msg: ru.settings.courseCreated });
                 await refreshCourses();
             } else {
                 const err = await res.json().catch(() => ({}));
-                setNote({ type: 'error', msg: err.error || 'Failed to create course.' });
+                setNote({ type: 'error', msg: uiError(err.error, ru.settings.courseCreateFailed) });
             }
-        } catch {
-            setNote({ type: 'error', msg: 'Failed to create course.' });
+        } catch (e) {
+            setNote({ type: 'error', msg: uiError(e, ru.settings.courseCreateFailed) });
         } finally {
             setCreatingCourse(false);
         }
@@ -221,13 +222,13 @@ export default function InstructorSettings() {
                 body: JSON.stringify(s),
             });
             if (res.ok) {
-                setNote({ type: 'success', msg: 'Settings saved and synced.' });
+                setNote({ type: 'success', msg: ru.settings.saved });
             } else {
                 const err = await res.json().catch(() => ({}));
-                setNote({ type: 'error', msg: err.error || 'Failed to save settings.' });
+                setNote({ type: 'error', msg: uiError(err.error, ru.settings.saveFailed) });
             }
-        } catch {
-            setNote({ type: 'error', msg: 'Failed to save settings.' });
+        } catch (e) {
+            setNote({ type: 'error', msg: uiError(e, ru.settings.saveFailed) });
         }
     }, [s, authFetch]);
     // Reset settings to defaults and sync to backend
@@ -240,12 +241,12 @@ export default function InstructorSettings() {
                 body: JSON.stringify(DEFAULTS),
             });
             if (res.ok) {
-                setNote({ type: 'info', msg: 'Settings reset to defaults and synced.' });
+                setNote({ type: 'info', msg: ru.settings.resetDone });
             } else {
-                setNote({ type: 'error', msg: 'Failed to reset settings.' });
+                setNote({ type: 'error', msg: uiError('Failed to reset settings.', ru.settings.resetFailed) });
             }
-        } catch {
-            setNote({ type: 'error', msg: 'Failed to reset settings.' });
+        } catch (e) {
+            setNote({ type: 'error', msg: uiError(e, ru.settings.resetFailed) });
         }
     }, [authFetch]);
 
@@ -276,11 +277,11 @@ export default function InstructorSettings() {
                 }
                 // Clear local storage and trigger full sign-out (app + NextAuth + IdP)
                 try { localStorage.clear(); sessionStorage.clear(); } catch { }
-                setNote({ type: 'success', msg: 'Account deleted. Signing out…' });
+                setNote({ type: 'success', msg: ru.settings.deleted });
                 // Redirect to IdP logout endpoint which will clear local session then IdP SSO
                 window.location.href = '/api/auth/idp-logout?redirect=/';
             } catch (e: any) {
-                setNote({ type: 'error', msg: e.message || 'Delete failed' });
+                setNote({ type: 'error', msg: uiError(e, ru.settings.deleteFailed) });
             } finally {
                 setPurging(false); setPurgeOpen(false);
             }
@@ -292,15 +293,15 @@ export default function InstructorSettings() {
         <>
             <HeaderActions
                 actions={[
-                    { key: 'save-all', label: 'Save All', ariaLabel: 'Save all settings', icon: <SaveIcon fontSize='small' />, onClick: save },
-                    { key: 'reset', label: 'Reset', ariaLabel: 'Reset settings', icon: <RestartAltIcon fontSize='small' />, onClick: reset },
+                    { key: 'save-all', label: ru.settings.saveAll, ariaLabel: ru.settings.saveAllTip, icon: <SaveIcon fontSize='small' />, onClick: save },
+                    { key: 'reset', label: ru.settings.reset, ariaLabel: ru.settings.resetTip, icon: <RestartAltIcon fontSize='small' />, onClick: reset },
                 ]}
             />
             <HeaderOverflowMenu
                 actions={[
                     {
                         key: 'delete-account',
-                        label: 'Delete Account',
+                        label: ru.settings.deleteAccount,
                         icon: <DeleteForeverIcon color="error" fontSize="small" />,
                         onClick: () => setPurgeOpen(true),
                     },
@@ -313,21 +314,21 @@ export default function InstructorSettings() {
         <>
             {loadingSettings && (
                 <Snackbar open anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                    <Alert severity="info">Loading settings…</Alert>
+                    <Alert severity="info">{ru.settings.loading}</Alert>
                 </Snackbar>
             )}
-            <PageCard headerTitle='Settings' headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain'>
+            <PageCard headerTitle={ru.settings.title} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain'>
                 <Box sx={{ mb: 2 }}>
                     <Grid container spacing={2}>
                         {/* Account */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
-                                <CardHeader title="Account" subheader="General instructor account details." />
+                                <CardHeader title={ru.settings.account} subheader={ru.settings.accountHelp} titleTypographyProps={{ sx: { whiteSpace: 'normal' } }} subheaderTypographyProps={{ sx: { whiteSpace: 'normal' } }} />
                                 <CardContent>
                                     <Grid container spacing={2}>
                                         <Grid size={{ xs: 12, md: 6 }}>
                                             <TextField
-                                                label="Names"
+                                                label={ru.settings.names}
                                                 value={user?.name || accountName}
                                                 fullWidth
                                                 variant='outlined'
@@ -337,7 +338,7 @@ export default function InstructorSettings() {
                                             />
                                         </Grid>
                                         <Grid size={{ xs: 12, md: 6 }}>
-                                            <TextField label="Email" value={accountEmail || ''} fullWidth variant='outlined' size='small' InputProps={{ readOnly: true }} disabled />
+                                            <TextField label={ru.settings.email} value={accountEmail || ''} fullWidth variant='outlined' size='small' InputProps={{ readOnly: true }} disabled />
                                         </Grid>
                                     </Grid>
                                 </CardContent>
@@ -347,12 +348,12 @@ export default function InstructorSettings() {
                         {/* Course Settings */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
-                                <CardHeader title="Course Settings" subheader="General parameters for this course." />
+                                <CardHeader title={ru.settings.courseSettings} subheader={ru.settings.courseHelp} titleTypographyProps={{ sx: { whiteSpace: 'normal' } }} subheaderTypographyProps={{ sx: { whiteSpace: 'normal' } }} />
                                 <CardContent>
                                     <Grid container spacing={2}>
                                         <Grid size={12}>
                                             <TextField
-                                                label="Course name"
+                                                label={ru.settings.courseName}
                                                 value={s.courseName}
                                                 onChange={(e) => setS({ ...s, courseName: e.target.value })}
                                                 variant="outlined"
@@ -362,7 +363,7 @@ export default function InstructorSettings() {
                                         </Grid>
                                         <Grid size={{ xs: 12, md: 6 }}>
                                             <TextField
-                                                label="Enrollment code"
+                                                label={ru.settings.enrollment}
                                                 value={s.enrollmentCode}
                                                 onChange={(e) => setS({ ...s, enrollmentCode: e.target.value })}
                                                 variant="outlined"
@@ -372,7 +373,8 @@ export default function InstructorSettings() {
                                         </Grid>
                                         <Grid size={{ xs: 6, md: 3 }}>
                                             <TextField
-                                                label="Attempts"
+                                                label={ru.settings.attempts}
+                                                sx={{ '& .MuiInputLabel-root': { whiteSpace: 'normal' } }}
                                                 type="number"
                                                 inputProps={{ min: 1, max: 20 }}
                                                 value={s.attempts}
@@ -384,7 +386,8 @@ export default function InstructorSettings() {
                                         </Grid>
                                         <Grid size={{ xs: 6, md: 3 }}>
                                             <TextField
-                                                label="Pass threshold (%)"
+                                                label={ru.settings.pass}
+                                                sx={{ '& .MuiInputLabel-root': { whiteSpace: 'normal' } }}
                                                 type="number"
                                                 inputProps={{ min: 0, max: 100 }}
                                                 value={s.passThreshold}
@@ -396,7 +399,8 @@ export default function InstructorSettings() {
                                         </Grid>
                                         <Grid size={{ xs: 6, md: 3 }}>
                                             <TextField
-                                                label="Late penalty (%/day)"
+                                                label={ru.settings.late}
+                                                sx={{ '& .MuiInputLabel-root': { whiteSpace: 'normal' } }}
                                                 type="number"
                                                 inputProps={{ min: 0, max: 50 }}
                                                 value={s.latePenalty}
@@ -408,11 +412,11 @@ export default function InstructorSettings() {
                                         </Grid>
                                     </Grid>
                                 </CardContent>
-                                <CardActions sx={{ justifyContent: 'flex-end', gap: 1 }}>
+                                <CardActions sx={{ justifyContent: 'flex-end', gap: 1, flexWrap: 'wrap' }}>
                                     {nameDirty && (
-                                        <Button startIcon={<SaveIcon />} color='secondary' variant='outlined' onClick={saveAccountName} disabled={!accountName.trim()}>Save Name</Button>
+                                        <Button startIcon={<SaveIcon />} color='secondary' variant='outlined' onClick={saveAccountName} disabled={!accountName.trim()} sx={{ whiteSpace: 'normal' }}>{ru.settings.saveName}</Button>
                                     )}
-                                    <Button startIcon={<SaveIcon />} variant="contained" onClick={save}>Save Course</Button>
+                                    <Button startIcon={<SaveIcon />} variant="contained" onClick={save} sx={{ whiteSpace: 'normal' }}>{ru.settings.saveCourse}</Button>
                                 </CardActions>
                             </Card>
                         </Grid>
@@ -420,15 +424,15 @@ export default function InstructorSettings() {
                         {/* Courses */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
-                                <CardHeader title="Courses" subheader="Create and switch between multiple courses." />
+                                <CardHeader title={ru.settings.courses} subheader={ru.settings.coursesHelp} titleTypographyProps={{ sx: { whiteSpace: 'normal' } }} subheaderTypographyProps={{ sx: { whiteSpace: 'normal' } }} />
                                 <CardContent>
                                     <Grid container spacing={2}>
                                         <Grid size={12}>
                                             <FormControl fullWidth size="small">
-                                                <InputLabel id="default-course-label">Default course</InputLabel>
+                                                <InputLabel id="default-course-label" sx={{ whiteSpace: 'normal' }}>{ru.settings.defaultCourse}</InputLabel>
                                                 <Select
                                                     labelId="default-course-label"
-                                                    label="Default course"
+                                                    label={ru.settings.defaultCourse}
                                                     value={defaultCourseId || ''}
                                                     onChange={(e) => {
                                                         const next = String(e.target.value || '');
@@ -437,18 +441,19 @@ export default function InstructorSettings() {
                                                     }}
                                                 >
                                                     {courses.map((c) => (
-                                                        <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                                                        <MenuItem key={c.id} value={c.id} sx={{ whiteSpace: 'normal' }}>{c.name}</MenuItem>
                                                     ))}
                                                 </Select>
                                             </FormControl>
                                         </Grid>
 
                                         <Grid size={12}>
-                                            <Typography variant="subtitle2" color="text.secondary">Add a new course</Typography>
+                                            <Typography variant="subtitle2" color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.settings.addNew}</Typography>
                                         </Grid>
                                         <Grid size={{ xs: 12, md: 7 }}>
                                             <TextField
-                                                label="Course name"
+                                                label={ru.settings.courseName}
+                                                placeholder={ru.settings.coursePh}
                                                 value={newCourseName}
                                                 onChange={(e) => setNewCourseName(e.target.value)}
                                                 variant="outlined"
@@ -458,7 +463,8 @@ export default function InstructorSettings() {
                                         </Grid>
                                         <Grid size={{ xs: 12, md: 5 }}>
                                             <TextField
-                                                label="Enrollment code"
+                                                label={ru.settings.enrollment}
+                                                placeholder={ru.settings.codePh}
                                                 value={newEnrollmentCode}
                                                 onChange={(e) => setNewEnrollmentCode(e.target.value)}
                                                 variant="outlined"
@@ -469,8 +475,8 @@ export default function InstructorSettings() {
                                     </Grid>
                                 </CardContent>
                                 <CardActions sx={{ justifyContent: 'flex-end' }}>
-                                    <Button variant="contained" onClick={createCourse} disabled={creatingCourse || !newCourseName.trim()}>
-                                        Add Course
+                                    <Button variant="contained" onClick={createCourse} disabled={creatingCourse || !newCourseName.trim()} sx={{ whiteSpace: 'normal' }}>
+                                        {ru.settings.addCourse}
                                     </Button>
                                 </CardActions>
                             </Card>
@@ -479,7 +485,7 @@ export default function InstructorSettings() {
                         {/* Grading Defaults */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
-                                <CardHeader title="Grading Defaults" subheader="Backend grading parameters used as defaults across tools." />
+                                <CardHeader title={ru.settings.grading} subheader={ru.settings.gradingHelp} titleTypographyProps={{ sx: { whiteSpace: 'normal' } }} subheaderTypographyProps={{ sx: { whiteSpace: 'normal' } }} />
                                 <CardContent>
                                     <GradingOptions
                                         options={s.gradingDefaults}
@@ -487,7 +493,7 @@ export default function InstructorSettings() {
                                     />
                                 </CardContent>
                                 <CardActions sx={{ justifyContent: 'flex-end' }}>
-                                    <Button startIcon={<SaveIcon />} variant="contained" onClick={save}>Save</Button>
+                                    <Button startIcon={<SaveIcon />} variant="contained" onClick={save} sx={{ whiteSpace: 'normal' }}>{ru.settings.save}</Button>
                                 </CardActions>
                             </Card>
                         </Grid>
@@ -495,14 +501,14 @@ export default function InstructorSettings() {
                         {/* CSV Templates */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
-                                <CardHeader title="CSV Templates" subheader="Download starter files for bulk grading." />
+                                <CardHeader title={ru.settings.templates} subheader={ru.settings.templatesHelp} titleTypographyProps={{ sx: { whiteSpace: 'normal' } }} subheaderTypographyProps={{ sx: { whiteSpace: 'normal' } }} />
                                 <CardContent>
                                     <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                                        <Button startIcon={<DownloadIcon />} variant="outlined" onClick={downloadStudentsTemplate}>
-                                            Students answers CSV
+                                        <Button startIcon={<DownloadIcon />} variant="outlined" onClick={downloadStudentsTemplate} sx={{ whiteSpace: 'normal' }}>
+                                            {ru.settings.studentsTemplate}
                                         </Button>
-                                        <Button startIcon={<DownloadIcon />} variant="outlined" onClick={downloadRefsTemplate}>
-                                            Reference statements CSV
+                                        <Button startIcon={<DownloadIcon />} variant="outlined" onClick={downloadRefsTemplate} sx={{ whiteSpace: 'normal' }}>
+                                            {ru.settings.refsTemplate}
                                         </Button>
                                     </Box>
                                 </CardContent>
@@ -523,13 +529,13 @@ export default function InstructorSettings() {
             </Snackbar>
 
             <Dialog open={purgeOpen} onClose={() => (!purging && setPurgeOpen(false))} maxWidth="sm" fullWidth>
-                <DialogTitle>Delete Account & All Data</DialogTitle>
+                <DialogTitle sx={{ whiteSpace: 'normal' }}>{ru.settings.deleteAll}</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        This will permanently delete ALL of your instructor data: assignments, questions, submissions, per-question answers, datasets, and settings. This cannot be undone.
+                    <DialogContentText sx={{ whiteSpace: 'normal' }}>
+                        {ru.settings.deleteHelp}
                     </DialogContentText>
-                    <DialogContentText sx={{ mt: 2, fontWeight: 600 }}>
-                        Type DELETE to confirm.
+                    <DialogContentText sx={{ mt: 2, fontWeight: 600, whiteSpace: 'normal' }}>
+                        {ru.settings.typeDelete}
                     </DialogContentText>
                     <TextField
                         autoFocus
@@ -543,9 +549,9 @@ export default function InstructorSettings() {
                     />
                 </DialogContent>
                 <DialogActions sx={{ justifyContent: 'space-between' }}>
-                    <Button onClick={() => setPurgeOpen(false)} disabled={purging}>Cancel</Button>
-                    <Button color="error" variant="contained" onClick={purgeAll} disabled={purging || confirmText !== 'DELETE'}>
-                        {purging ? 'Deleting…' : 'Delete Everything'}
+                    <Button onClick={() => setPurgeOpen(false)} disabled={purging}>{ru.settings.cancel}</Button>
+                    <Button color="error" variant="contained" onClick={purgeAll} disabled={purging || confirmText !== 'DELETE'} sx={{ whiteSpace: 'normal' }}>
+                        {purging ? ru.settings.deleting : ru.settings.deleteEverything}
                     </Button>
                 </DialogActions>
             </Dialog>

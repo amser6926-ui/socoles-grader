@@ -8,6 +8,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { signIn } from 'next-auth/react';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m, uiError } from '@/i18n';
 
 // More explicit typing; params are synchronous in Next.js App Router
 export default function InviteAcceptPage({ params }: any) {
@@ -56,7 +57,7 @@ export default function InviteAcceptPage({ params }: any) {
             try {
                 const res = await fetch(`/api/invites/${encodeURIComponent(token)}`);
                 const data = await res.json();
-                if (!res.ok) throw new Error(data?.error || 'Invite not found');
+                if (!res.ok) throw new Error(uiError(data?.error || 'Invite not found', m.errors.generic));
                 if (cancelled) return;
                 setName(data?.name || '');
                 setEmail(data?.email || '');
@@ -64,16 +65,16 @@ export default function InviteAcceptPage({ params }: any) {
                 const used = !!data?.used_at;
                 const expired = data?.expires_at ? new Date(data.expires_at) < new Date() : false;
                 if (used) {
-                    setErr('This invite was already used.');
+                    setErr(m.invite.used);
                     setInviteOk(false);
                 } else if (expired) {
-                    setErr('This invite has expired.');
+                    setErr(m.invite.expired);
                     setInviteOk(false);
                 } else {
                     setInviteOk(true);
                 }
             } catch (e: unknown) {
-                setErr(e instanceof Error ? e.message : 'Failed to load invite');
+                setErr(uiError(e, m.errors.generic));
                 setInviteOk(false);
             } finally {
                 if (!cancelled) setLoading(false);
@@ -119,21 +120,21 @@ export default function InviteAcceptPage({ params }: any) {
             const data = await ex.json();
             if (!ex.ok) {
                 setExchangeErrCode(ex.status);
-                let message = data?.error || 'Invite acceptance failed';
-                if (ex.status === 401) message = 'Please sign in with Keycloak first.';
-                else if (ex.status === 403) message = `You are signed in as ${ssoEmail || 'an account'} but this invite is for ${email}. Sign out and sign in with the invited email.`;
-                else if (ex.status === 400) message = data?.error || 'Invite invalid or already used.';
+                let message = uiError(data?.error || 'Invite acceptance failed', m.errors.generic);
+                if (ex.status === 401) message = uiError('Please sign in with Keycloak first.', m.errors.generic);
+                else if (ex.status === 403) message = m.invite.emailMismatch(ssoEmail || m.invite.otherAccount, email);
+                else if (ex.status === 400) message = uiError(data?.error || 'Invite invalid or already used.', m.errors.generic);
                 throw new Error(message);
             }
             const { token: studentToken, student } = data || {};
             localStorage.setItem('sqlgrader.student', JSON.stringify({ token: studentToken, id: student?.id, email: student?.email, name: student?.name, instructorId: student?.instructorId }));
             setUser({ name: student?.email, role: 'student', token: studentToken, instructorId: student?.instructorId });
-            setNote(isAuto ? 'Invite accepted via SSO. Redirecting...' : 'Invite accepted. Redirecting...');
+            setNote(isAuto ? m.invite.acceptedSso : m.invite.accepted);
             try { sessionStorage.setItem('appshell.active', 's-dash'); } catch { }
             window.dispatchEvent(new CustomEvent('appshell:navigate', { detail: { id: 's-dash' } }));
             router.push('/');
         } catch (e: unknown) {
-            setErr(e instanceof Error ? e.message : 'Invite acceptance failed');
+            setErr(e instanceof Error ? e.message : uiError('Invite acceptance failed', m.errors.generic));
             // Switch to manual mode on first failure so user can retry
             setManualMode(true);
         } finally {
@@ -171,12 +172,12 @@ export default function InviteAcceptPage({ params }: any) {
                 {/* Gradient header to match auth pages */}
                 <CardHeader
                     titleTypographyProps={{ sx: { fontWeight: 700 } }}
-                    title={`Join ${courseName ? courseName : 'Course'}`}
+                    title={m.invite.join(courseName || m.common.course)}
                     subheader={
                         <Typography variant="body2" sx={{ opacity: 0.9 }}>
                             {courseName
-                                ? `You're accepting an invite to join the course ${courseName}. Create your account to continue.`
-                                : 'Create your account to join and sign in later'}
+                                ? m.invite.accepting(courseName)
+                                : m.invite.createLater}
                         </Typography>
                     }
                     sx={{
@@ -198,13 +199,13 @@ export default function InviteAcceptPage({ params }: any) {
                                 <Typography variant="body2" sx={{ flex: 1 }}>{err}</Typography>
                                 <Stack direction="row" spacing={1}>
                                     {exchangeErrCode === 403 && (
-                                        <Button size="small" variant="text" color="secondary" startIcon={<LogoutIcon fontSize="small" />} onClick={() => { window.location.href = '/api/auth/idp-logout?redirect=/invite/' + encodeURIComponent(token); }}>Sign out</Button>
+                                        <Button size="small" variant="text" color="secondary" startIcon={<LogoutIcon fontSize="small" />} onClick={() => { window.location.href = '/api/auth/idp-logout?redirect=/invite/' + encodeURIComponent(token); }}>{m.invite.signOut}</Button>
                                     )}
                                     {exchangeErrCode === 401 && (
-                                        <Button size="small" variant="outlined" color="secondary" onClick={acceptWithSSO}>Sign in</Button>
+                                        <Button size="small" variant="outlined" color="secondary" onClick={acceptWithSSO}>{m.invite.signIn}</Button>
                                     )}
                                     {manualMode && inviteOk && ssoReady && (
-                                        <Button size="small" variant="outlined" color="primary" startIcon={<ReplayIcon fontSize="small" />} disabled={busy} onClick={() => performExchange(false)}>Retry</Button>
+                                        <Button size="small" variant="outlined" color="primary" startIcon={<ReplayIcon fontSize="small" />} disabled={busy} onClick={() => performExchange(false)}>{m.invite.retry}</Button>
                                     )}
                                 </Stack>
                             </Stack>
@@ -212,12 +213,12 @@ export default function InviteAcceptPage({ params }: any) {
                     )}
                     {ssoSession && !ssoReady && !note && !err && (
                         <Alert severity="warning" sx={{ mb: 2 }}>
-                            Your Keycloak profile does not provide an email claim. Please update your profile or contact an administrator.
+                            {m.invite.noEmailClaim}
                         </Alert>
                     )}
                     <Stack spacing={1.5}>
-                        <TextField label="Full name" size="small" fullWidth value={name} disabled />
-                        <TextField label="Email" size="small" fullWidth value={email} disabled />
+                        <TextField label={m.invite.fullName} size="small" fullWidth value={name} disabled />
+                        <TextField label={m.invite.email} size="small" fullWidth value={email} disabled />
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="center" alignItems="stretch">
                             <Button
                                 variant="outlined"
@@ -230,7 +231,7 @@ export default function InviteAcceptPage({ params }: any) {
                                     '&:hover': { background: (t) => `${t.palette.secondary.main}12` },
                                 }}
                             >
-                                {ssoSession ? (ssoReady ? `Signed in as ${ssoEmail}` : 'Session detected') : 'Continue with Keycloak'}
+                                {ssoSession ? (ssoReady ? m.invite.signedInAs(ssoEmail || '') : m.invite.sessionDetected) : m.invite.continueKeycloak}
                             </Button>
                             {canManualAccept && (
                                 <Button
@@ -240,13 +241,13 @@ export default function InviteAcceptPage({ params }: any) {
                                     onClick={() => performExchange(false)}
                                     disabled={!canManualAccept}
                                 >
-                                    Accept invite
+                                    {m.invite.accept}
                                 </Button>
                             )}
                         </Stack>
                         {!inviteOk && !loading && (
                             <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-                                You can still sign in; request a new invite afterward if needed.
+                                {m.invite.stillSignIn}
                             </Typography>
                         )}
                     </Stack>

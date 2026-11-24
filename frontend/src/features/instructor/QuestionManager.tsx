@@ -60,6 +60,7 @@ import SqlEditor from '@/components/SqlEditor';
 import RubricBars from '@/components/RubricBars';
 import FeedbackList from '@/components/FeedbackList';
 import GradeDisplay from '@/components/GradeDisplay';
+import { difficultyLabel, formatDue, m as ru, protocolLabel, uiError } from '@/i18n';
 
 /** Bank table moved above component to avoid any transient name resolution issues */
 function BankTable({ rows = [] as Question[], loading, onEdit, selectedId, onSelect, onAssign, onDelete }: { rows?: Question[]; loading: boolean; onEdit: (id: string) => void; selectedId?: string | null; onSelect?: (id: string) => void; onAssign?: (id: string) => void; onDelete?: (id: string) => void }) {
@@ -74,7 +75,7 @@ function BankTable({ rows = [] as Question[], loading, onEdit, selectedId, onSel
     return (
         <Box>
             {!safeRows.length && !loading && (
-                <Typography variant='body2' color='text.secondary' sx={{ p: 1 }}>No questions yet.</Typography>
+                <Typography variant='body2' color='text.secondary' sx={{ p: 1, whiteSpace: 'normal' }}>{ru.questions.none}</Typography>
             )}
             <Box sx={{
                 display: 'grid',
@@ -86,7 +87,7 @@ function BankTable({ rows = [] as Question[], loading, onEdit, selectedId, onSel
                     <QuestionCard
                         key={q.id}
                         id={q.id}
-                        title={q.title || 'Untitled'}
+                        title={q.title || ru.common.untitledQuestion}
                         difficulty={q.difficulty || 'Intermediate'}
                         status={q.status || 'Draft'}
                         maxPoints={q.maxPoints || 0}
@@ -105,11 +106,11 @@ function BankTable({ rows = [] as Question[], loading, onEdit, selectedId, onSel
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-                <MenuItem onClick={() => triggerAction(onEdit)}><EditIcon fontSize='small' style={{ marginRight: 8 }} /> Edit</MenuItem>
-                <MenuItem onClick={() => triggerAction(onAssign)}><AddIcon fontSize='small' style={{ marginRight: 8 }} /> Assign</MenuItem>
-                <MenuItem onClick={() => triggerAction(onDelete)}>
+                <MenuItem onClick={() => triggerAction(onEdit)} sx={{ whiteSpace: 'normal' }}><EditIcon fontSize='small' style={{ marginRight: 8 }} /> {ru.questions.edit}</MenuItem>
+                <MenuItem onClick={() => triggerAction(onAssign)} sx={{ whiteSpace: 'normal' }}><AddIcon fontSize='small' style={{ marginRight: 8 }} /> {ru.questions.assign}</MenuItem>
+                <MenuItem onClick={() => triggerAction(onDelete)} sx={{ whiteSpace: 'normal' }}>
                     <ListItemIcon><DeleteIcon fontSize='small' color='error' /></ListItemIcon>
-                    <ListItemText primaryTypographyProps={{ color: 'error.main' }}>Delete</ListItemText>
+                    <ListItemText primaryTypographyProps={{ color: 'error.main' }}>{ru.questions.delete}</ListItemText>
                 </MenuItem>
             </Menu>
         </Box>
@@ -362,7 +363,7 @@ export default function QuestionManager() {
                 setRubric(r => ({ syntax: r.syntax ?? 0, semantics: r.semantics ?? 0, results: r.results ?? 0, absent: r.absent || { syntax: true, semantics: true, results: true } }));
             }
         } catch (e) {
-            const msg = (e as Error)?.message || 'Autograder request failed.';
+            const msg = uiError(e, ru.errors.gradingFailed);
             setPreviewFeedback([`Autograder request failed: ${msg}`]);
         } finally {
             setAttemptsUsed(u => Math.min(attemptsAllowed, u + 1));
@@ -381,7 +382,7 @@ export default function QuestionManager() {
             const data = await res.json();
             setQuestions(Array.isArray(data) ? data : []);
         } catch (e: any) {
-            setError(e.message || 'Failed to load questions');
+            setError(uiError(e, ru.errors.loadQuestions));
         } finally { setLoading(false); }
     }
 
@@ -418,7 +419,7 @@ export default function QuestionManager() {
 
     async function deleteQuestion(id: string) {
         if (!id) return;
-        if (!window.confirm('Delete this question? This cannot be undone.')) return;
+        if (!window.confirm(ru.questions.deleteConfirm)) return;
         setDeletingQuestionId(id);
         try {
             const res = await authFetch(`/api/questions?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -429,9 +430,9 @@ export default function QuestionManager() {
             setQuestions(list => list.filter(q => q.id !== id));
             if (selectedId === id) setSelectedId(null);
             if (editingId === id) { resetForm(); setView('list'); }
-            setSnack('Question deleted');
+            setSnack(ru.questions.deleted);
         } catch (e: any) {
-            setError(e?.message || 'Failed to delete');
+            setError(uiError(e, ru.errors.deleteQuestion));
         } finally { setDeletingQuestionId(null); }
     }
 
@@ -460,12 +461,12 @@ export default function QuestionManager() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error || 'Failed to save');
-            setSnack(editingId ? 'Question updated' : (publish ? 'Question published' : 'Draft saved'));
+            setSnack(editingId ? ru.questions.updated : (publish ? ru.questions.published : ru.questions.draftSaved));
             resetForm();
             await loadQuestions();
             setView('list');
         } catch (e: any) {
-            setError(e.message || 'Failed to save');
+            setError(uiError(e, ru.errors.saveQuestion));
         } finally { setSaving(false); }
     }
 
@@ -536,10 +537,10 @@ export default function QuestionManager() {
                 const data = await res.json().catch(() => null);
                 throw new Error(data?.error || 'Failed to assign');
             }
-            setSnack('Question assigned');
+            setSnack(ru.questions.assigned);
             setAssignDialogOpen(false);
         } catch (e: any) {
-            setAssignmentsError(e.message || 'Failed to assign');
+            setAssignmentsError(uiError(e, ru.errors.assignQuestion));
         } finally { setAssigning(false); }
     }
     // Replace previous openAssignChooser logic with a sequential loader to avoid stuck state
@@ -563,7 +564,7 @@ export default function QuestionManager() {
                 await refreshAlreadyLinked(questionId, assignmentsList);
             }
         } catch (e: any) {
-            setAssignmentsError(e.message || 'Failed to load assignments');
+            setAssignmentsError(uiError(e, ru.errors.loadAssignments));
             setCheckingAssignedLinks(false);
         } finally {
             setAssignmentsLoading(false);
@@ -611,13 +612,13 @@ export default function QuestionManager() {
             setDatasetDlgOpen(false);
             setDatasetName(''); setDatasetSql('');
         } catch (e: any) {
-            alert(e.message || 'Failed');
+            alert(uiError(e, ru.errors.saveDataset));
         } finally { setSavingDataset(false); }
     }
 
     // Early auth gating (after all hooks declared)
     if (!authReady) {
-        return <Typography variant='body2' color='text.secondary'>Initializing authentication…</Typography>;
+        return <Typography variant='body2' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.questions.authInit}</Typography>;
     }
 
     const headerActions = (
@@ -625,31 +626,31 @@ export default function QuestionManager() {
             actions={[
                 view === 'list' ? {
                     key: 'preview',
-                    label: 'Preview question',
-                    ariaLabel: 'Preview question',
+                    label: ru.questions.preview,
+                    ariaLabel: ru.questions.preview,
                     onClick: openPreview,
                     disabled: !selectedId,
                     icon: <VisibilityIcon fontSize='small' />,
                 } : null,
                 view === 'list' ? {
                     key: 'add',
-                    label: 'Add question',
-                    ariaLabel: 'Add question',
+                    label: ru.questions.add,
+                    ariaLabel: ru.questions.add,
                     onClick: startCreate,
                     icon: <AddIcon fontSize='small' />,
                     emphasis: 'high',
                 } : null,
                 view === 'editor' ? {
                     key: 'back',
-                    label: 'Back to list',
-                    ariaLabel: 'Back to list',
+                    label: ru.questions.back,
+                    ariaLabel: ru.questions.back,
                     onClick: () => { setView('list'); },
                     icon: <ArrowBackIcon fontSize='small' />,
                 } : null,
                 view === 'editor' ? {
                     key: 'new',
-                    label: 'New',
-                    ariaLabel: 'New question form',
+                    label: ru.questions.new,
+                    ariaLabel: ru.questions.newForm,
                     onClick: resetForm,
                 } : null,
             ].filter(Boolean) as any}
@@ -657,28 +658,28 @@ export default function QuestionManager() {
     );
 
     return (
-        <PageCard headerTitle={view === 'editor' ? (editingId ? 'Edit Question' : 'Create Question') : 'Questions'} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain'>
+        <PageCard headerTitle={view === 'editor' ? (editingId ? ru.questions.editTitle : ru.questions.createTitle) : ru.questions.listTitle} headerProps={{ height: 56 }} headerActions={headerActions} headerActionsVariant='plain'>
             <Box sx={{ display: 'grid', gap: 2, p: { xs: 2, md: 3 } }}>
                 {view === 'editor' && (
                     <Box sx={{ p: { xs: 1.5, md: 2 }, borderRadius: 2, bgcolor: 'transparent', backgroundImage: 'none' }}>
                         {/* Editor form */}
                         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { md: 'repeat(2,1fr)', xs: '1fr' } }}>
                             <Box>
-                                <TextField label="Title" placeholder="Find authors with > 3 books" variant="outlined" fullWidth value={title} onChange={(e) => setTitle(e.target.value)} />
+                                <TextField label={ru.common.title} placeholder={ru.questions.titlePh} variant="outlined" fullWidth value={title} onChange={(e) => setTitle(e.target.value)} />
                             </Box>
                             <Box>
-                                <TextField label="Difficulty" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} select variant="outlined" fullWidth>
+                                <TextField label={ru.common.difficulty} value={difficulty} onChange={(e) => setDifficulty(e.target.value)} select variant="outlined" fullWidth>
                                     {['Beginner', 'Intermediate', 'Advanced'].map((d) => (
-                                        <MenuItem key={d} value={d}>{d}</MenuItem>
+                                        <MenuItem key={d} value={d}>{difficultyLabel(d)}</MenuItem>
                                     ))}
                                 </TextField>
                             </Box>
                             <Box>
-                                <TextField label="Max points" type="number" value={maxPoints} onChange={(e) => setMaxPoints(Number(e.target.value))} variant="outlined" fullWidth />
+                                <TextField label={ru.questions.maxPoints} type="number" value={maxPoints} onChange={(e) => setMaxPoints(Number(e.target.value))} variant="outlined" fullWidth />
                             </Box>
                             <Box>
                                 <TextField
-                                    label="Dataset"
+                                    label={ru.questions.dataset}
                                     value={dataset}
                                     onChange={(e) => {
                                         const v = e.target.value as string;
@@ -691,62 +692,62 @@ export default function QuestionManager() {
                                     variant="outlined"
                                     fullWidth
                                 >
-                                    <MenuItem value='__create__'><AddIcon fontSize='small' style={{ marginRight: 8 }} />Create new dataset…</MenuItem>
+                                    <MenuItem value='__create__' sx={{ whiteSpace: 'normal' }}><AddIcon fontSize='small' style={{ marginRight: 8 }} />{ru.questions.newDataset}</MenuItem>
                                     <Divider />
-                                    {loadingDatasets && <MenuItem disabled>Loading…</MenuItem>}
+                                    {loadingDatasets && <MenuItem disabled>{ru.questions.loadingDatasets}</MenuItem>}
                                     {datasets.map(d => <MenuItem key={d.id} value={d.name}>{d.name}</MenuItem>)}
                                 </TextField>
                             </Box>
                             <Box sx={{ gridColumn: '1 / -1' }}>
-                                <RichTextEditor label='Prompt' value={prompt} onChange={setPrompt} placeholder='Describe the task for students. You can add lists, headings, code, and formulas.' />
+                                <RichTextEditor label={ru.questions.prompt} value={prompt} onChange={setPrompt} placeholder={ru.questions.promptHelp} />
                             </Box>
                             {/* Grading parameters selector */}
-                            <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                            <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
                                 <Tooltip
                                     arrow
                                     enterDelay={400}
                                     placement='top-start'
                                     title={
                                         <Box sx={{ p: 0.5 }}>
-                                            <Typography variant='caption' sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>Default grading parameters</Typography>
+                                            <Typography variant='caption' sx={{ fontWeight: 700, display: 'block', mb: 0.5, whiteSpace: 'normal' }}>{ru.questions.defaultsTitle}</Typography>
                                             <Box component='ul' sx={{ m: 0, pl: 2, listStyle: 'disc' }}>
-                                                <li><Typography variant='caption'>Syntax sensitivity: {savedDefaults.syntaxSensitivity}</Typography></li>
-                                                <li><Typography variant='caption'>Semantics sensitivity: {savedDefaults.semanticsSensitivity}</Typography></li>
-                                                <li><Typography variant='caption'>Results sensitivity: {savedDefaults.resultsSensitivity}</Typography></li>
-                                                <li><Typography variant='caption'>Priority: {savedDefaults.evaluationPriority}</Typography></li>
-                                                <li><Typography variant='caption'>Text edit distance: {savedDefaults.textEditDistance}</Typography></li>
-                                                <li><Typography variant='caption'>Tree edit distance: {savedDefaults.treeEditDistance}</Typography></li>
-                                                <li><Typography variant='caption'>Check order: {savedDefaults.checkOrder ? 'Yes' : 'No'}</Typography></li>
-                                                <li><Typography variant='caption'>Auto DB: {savedDefaults.autoDB ? `Yes (${savedDefaults.numberOfDBs || '—'} DBs${savedDefaults.dbName ? `, name: ${savedDefaults.dbName}` : ''})` : 'No'}</Typography></li>
-                                                <li><Typography variant='caption'>PostgreSQL mode: {savedDefaults.use_postgresql ? 'On' : 'Off'}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.syntax}: {protocolLabel(savedDefaults.syntaxSensitivity)}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.semantics}: {protocolLabel(savedDefaults.semanticsSensitivity)}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.results}: {protocolLabel(savedDefaults.resultsSensitivity)}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.priorityShort}: {protocolLabel(savedDefaults.evaluationPriority)}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.textDistance}: {savedDefaults.textEditDistance}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.treeDistance}: {savedDefaults.treeEditDistance}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.checkOrder}: {savedDefaults.checkOrder ? ru.common.yes : ru.common.no}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.autoDb}: {savedDefaults.autoDB ? ru.questions.autoDbOn(savedDefaults.numberOfDBs || '—', savedDefaults.dbName || undefined) : ru.common.no}</Typography></li>
+                                                <li><Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.grading.usePg}: {savedDefaults.use_postgresql ? ru.common.on : ru.common.off}</Typography></li>
                                             </Box>
                                         </Box>
                                     }
                                 >
                                     <Box component='span'>
-                                        <FormControlLabel control={<Switch checked={useDefaultGrading as any} onChange={(_, v) => setUseDefaultGrading(v as any)} />} label="Use default grading parameters" />
+                                        <FormControlLabel sx={{ alignItems: 'flex-start', '& .MuiFormControlLabel-label': { whiteSpace: 'normal' } }} control={<Switch checked={useDefaultGrading as any} onChange={(_, v) => setUseDefaultGrading(v as any)} />} label={ru.questions.useDefaults} />
                                     </Box>
                                 </Tooltip>
-                                <Button size='small' variant='outlined' disabled={useDefaultGrading as any} onClick={() => setGradingDlgOpen(true)}>Set custom parameters…</Button>
+                                <Button size='small' variant='outlined' sx={{ whiteSpace: 'normal' }} disabled={useDefaultGrading as any} onClick={() => setGradingDlgOpen(true)}>{ru.questions.customParams}</Button>
                             </Box>
                             <Box sx={{ gridColumn: '1 / -1' }}>
-                                <SqlEditor label='Init SQL (required per question)' placeholder={`-- REQUIRED: DDL + seed data executed in a fresh DB BEFORE grading this question.`} value={initSql} onChange={setInitSql} minRows={10} />
+                                <SqlEditor label={ru.questions.initSql} placeholder={ru.questions.initSqlPh} value={initSql} onChange={setInitSql} minRows={10} />
                             </Box>
                             <Box sx={{ gridColumn: '1 / -1' }}>
                                 <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ minHeight: 36 }}>
-                                    <Tab label="Model answers" sx={{ minHeight: 36 }} />
-                                    <Tab label="Hints" sx={{ minHeight: 36 }} />
+                                    <Tab label={ru.questions.modelAnswers} sx={{ minHeight: 36, whiteSpace: 'normal' }} />
+                                    <Tab label={ru.questions.hints} sx={{ minHeight: 36, whiteSpace: 'normal' }} />
                                 </Tabs>
                                 <Divider sx={{ mb: 2 }} />
                                 {tab === 0 && (
                                     <Box sx={{ display: 'grid', gap: 2 }}>
-                                        <SqlEditor label="Primary model answer (SQL)" placeholder={`-- Instructor-only\nSELECT author, COUNT(*) \nFROM Book \nGROUP BY author \nHAVING COUNT(*) > 3;`} value={modelSql} onChange={setModelSql} minRows={10} />
+                                        <SqlEditor label={ru.questions.primaryModel} placeholder={ru.questions.primaryModelPh} value={modelSql} onChange={setModelSql} minRows={10} />
                                         <Box>
-                                            <Typography variant='caption' color='text.secondary'>Add additional valid model answers (optional)</Typography>
+                                            <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.questions.extraModels}</Typography>
                                             <Box sx={{ display: 'grid', gap: 1, mt: 1 }}>
-                                                <SqlEditor label='Add model answer (SQL)' placeholder='SELECT * FROM Book;' value={modelQueryInput} onChange={setModelQueryInput} minRows={4} onEnterSubmit={addModelQuery} />
-                                                <Button size='small' variant='outlined' startIcon={<AddIcon />} onClick={addModelQuery} disabled={!modelQueryInput.trim()}>Add</Button>
-                                                {!modelQueries.length && <Typography variant='caption' color='text.secondary'>No additional model answers added.</Typography>}
+                                                <SqlEditor label={ru.questions.addModel} placeholder={ru.questions.modelPh} value={modelQueryInput} onChange={setModelQueryInput} minRows={4} onEnterSubmit={addModelQuery} />
+                                                <Button size='small' variant='outlined' startIcon={<AddIcon />} onClick={addModelQuery} disabled={!modelQueryInput.trim()} sx={{ whiteSpace: 'normal' }}>{ru.common.add}</Button>
+                                                {!modelQueries.length && <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.questions.noExtra}</Typography>}
                                                 {!!modelQueries.length && (
                                                     <List dense sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                                         {modelQueries.map((mq, i) => (
@@ -756,21 +757,21 @@ export default function QuestionManager() {
                                                         ))}
                                                     </List>
                                                 )}
-                                                {!!modelQueries.length && <Typography variant='caption' color='text.secondary'>{modelQueries.length} additional answer(s).</Typography>}
+                                                {!!modelQueries.length && <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.questions.extraCount(modelQueries.length)}</Typography>}
                                             </Box>
                                         </Box>
                                     </Box>
                                 )}
                                 {tab === 1 && (
-                                    <TextField label="Hints" placeholder="Optional" variant="outlined" multiline minRows={6} fullWidth value={hints} onChange={(e) => setHints(e.target.value)} />
+                                    <TextField label={ru.questions.hints} placeholder={ru.questions.hintsOptional} variant="outlined" multiline minRows={6} fullWidth value={hints} onChange={(e) => setHints(e.target.value)} />
                                 )}
                             </Box>
                         </Box>
                         <Box sx={{ mt: 2, justifyContent: 'space-between', display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {editingId && <Button startIcon={<CancelIcon />} size='small' onClick={() => { resetForm(); setView('list'); }}>Cancel edit</Button>}
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                <Button variant="outlined" startIcon={editingId ? <SaveIcon /> : <TaskAltIcon />} size="small" disabled={!canSubmit || saving} onClick={() => submitQuestion(false)}>{editingId ? 'Update draft' : 'Save draft'}</Button>
-                                <Button variant="contained" startIcon={<AutoAwesomeIcon />} size="small" disabled={!canSubmit || saving} onClick={() => submitQuestion(true)}>{editingId ? 'Update & Publish' : 'Publish'}</Button>
+                            {editingId && <Button startIcon={<CancelIcon />} size='small' sx={{ whiteSpace: 'normal' }} onClick={() => { resetForm(); setView('list'); }}>{ru.questions.cancelEdit}</Button>}
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <Button variant="outlined" startIcon={editingId ? <SaveIcon /> : <TaskAltIcon />} size="small" sx={{ whiteSpace: 'normal' }} disabled={!canSubmit || saving} onClick={() => submitQuestion(false)}>{editingId ? ru.questions.updateDraft : ru.questions.saveDraft}</Button>
+                                <Button variant="contained" startIcon={<AutoAwesomeIcon />} size="small" sx={{ whiteSpace: 'normal' }} disabled={!canSubmit || saving} onClick={() => submitQuestion(true)}>{editingId ? ru.questions.updatePublish : ru.questions.publish}</Button>
                             </Box>
                         </Box>
                     </Box>
@@ -784,31 +785,31 @@ export default function QuestionManager() {
                 )}
                 {/* ASSIGN QUESTION -> ASSIGNMENT DIALOG */}
                 <Dialog open={assignDialogOpen} onClose={() => setAssignDialogOpen(false)} fullWidth maxWidth='sm'>
-                    <DialogTitle>Assign Question</DialogTitle>
+                    <DialogTitle sx={{ whiteSpace: 'normal' }}>{ru.questions.assignTitle}</DialogTitle>
                     <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <TextField label='Filter assignments' size='small' value={assignFilter} onChange={e => setAssignFilter(e.target.value)} helperText='Showing only assignments that do not already include this question.' />
+                        <TextField label={ru.questions.filterAssignments} size='small' value={assignFilter} onChange={e => setAssignFilter(e.target.value)} helperText={ru.questions.filterHelp} />
                         {(assignmentsLoading || checkingAssignedLinks) && <LinearProgress />}
                         {assignmentsError && <Typography variant='caption' color='error'>{assignmentsError}</Typography>}
                         <Box sx={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {!assignmentsLoading && checkingAssignedLinks && (
-                                <Typography variant='caption'>Checking existing links…</Typography>
+                                <Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.questions.checkingLinks}</Typography>
                             )}
                             {!assignmentsLoading && !checkingAssignedLinks && !filteredAssignmentsList.length && (
-                                <Typography variant='caption'>No available assignments to assign (question may already be in all assignments).</Typography>
+                                <Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.questions.noAssignments}</Typography>
                             )}
                             {!checkingAssignedLinks && filteredAssignmentsList.map(a => (
-                                <Box key={a.id} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' }, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }} onClick={() => assignQuestionToAssignment(a.id)}>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                        <Typography variant='body2' fontWeight={600}>{a.title}</Typography>
-                                        <Typography variant='caption' color='text.secondary'>Due: {a.due || '—'} • {a.difficulty} • {a.points} pts</Typography>
+                                <Box key={a.id} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' }, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }} onClick={() => assignQuestionToAssignment(a.id)}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                        <Typography variant='body2' fontWeight={600} sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{a.title}</Typography>
+                                        <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.common.dueOn(a.due ? formatDue(a.due) : '—')} • {difficultyLabel(a.difficulty)} • {ru.common.pts(a.points)}</Typography>
                                     </Box>
-                                    <Button size='small' variant='outlined' disabled={assigning}>{assigning ? 'Assigning…' : 'Assign'}</Button>
+                                    <Button size='small' variant='outlined' disabled={assigning} sx={{ whiteSpace: 'normal' }}>{assigning ? ru.questions.assigning : ru.questions.assignBtn}</Button>
                                 </Box>
                             ))}
                         </Box>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setAssignDialogOpen(false)}>Close</Button>
+                        <Button onClick={() => setAssignDialogOpen(false)} sx={{ whiteSpace: 'normal' }}>{ru.common.close}</Button>
                     </DialogActions>
                 </Dialog>
                 <Snackbar open={!!snack} autoHideDuration={3000} onClose={() => setSnack(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
@@ -816,18 +817,18 @@ export default function QuestionManager() {
                 </Snackbar>
                 {/* Per-question Grading Parameters dialog */}
                 <Dialog open={gradingDlgOpen} onClose={() => setGradingDlgOpen(false)} fullWidth maxWidth='md'>
-                    <DialogTitle>Custom grading parameters</DialogTitle>
+                    <DialogTitle sx={{ whiteSpace: 'normal' }}>{ru.questions.customDialog}</DialogTitle>
                     <DialogContent dividers>
                         <GradingOptions options={customGrading as any} onChange={(k, v) => setCustomGrading(prev => ({ ...(prev as any), [k]: v }))} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setGradingDlgOpen(false)}>Close</Button>
+                        <Button onClick={() => setGradingDlgOpen(false)} sx={{ whiteSpace: 'normal' }}>{ru.common.close}</Button>
                     </DialogActions>
                 </Dialog>
                 <Dialog open={previewOpen} onClose={() => { setPreviewOpen(false); setPreviewData(null); }} fullWidth maxWidth='xl'>
-                    <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Chip size='small' color='warning' label='Preview Mode' />
-                        {(previewData?.title || title) || 'Untitled question'}
+                    <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', whiteSpace: 'normal' }}>
+                        <Chip size='small' color='warning' label={ru.player.previewMode} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+                        {(previewData?.title || title) || ru.common.untitledQuestion}
                     </DialogTitle>
                     <DialogContent dividers sx={{ p: 2 }}>
                         {previewLoading && <LinearProgress sx={{ mb: 2 }} />}
@@ -835,17 +836,17 @@ export default function QuestionManager() {
                             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { lg: '1fr 340px', md: '1fr', sm: '1fr' } }}>
                                 {/* LEFT: question working area replicating student view */}
                                 <Card variant='outlined' sx={{ order: { md: 0 } }}>
-                                    <CardHeader title={<Typography variant='subtitle1' sx={{ fontSize: 16 }}>{previewData?.title || title || 'Untitled question'}</Typography>} subheader={<Typography variant='caption' color='text.secondary'>Preview • Attempts left: {attemptsLeft}</Typography>} />
+                                    <CardHeader title={<Typography variant='subtitle1' sx={{ fontSize: 16, whiteSpace: 'normal' }}>{previewData?.title || title || ru.common.untitledQuestion}</Typography>} subheader={<Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.player.previewMode} • {ru.player.attemptsLeft(attemptsLeft)}</Typography>} />
                                     <CardContent sx={{ pt: 0, display: 'grid', gap: 1.5 }}>
                                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                             {!!(previewData?.difficulty || difficulty) && <DifficultyChip value={previewData?.difficulty || difficulty} />}
-                                            <Chip size='small' label={`${previewData?.maxPoints ?? maxPoints} pts`} />
-                                            <Chip size='small' variant='outlined' label={`Dataset: ${previewData?.dataset || dataset}`} />
-                                            <Chip size='small' color='default' variant='outlined' label={`Attempts used: ${attemptsUsed}`} />
+                                            <Chip size='small' label={ru.common.pts(previewData?.maxPoints ?? maxPoints)} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+                                            <Chip size='small' variant='outlined' label={ru.questions.datasetLine(previewData?.dataset || dataset)} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+                                            <Chip size='small' color='default' variant='outlined' label={ru.questions.attemptsUsed(attemptsUsed)} sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal' } }} />
                                         </Box>
                                         <Box>
                                             <PromptWithHint
-                                                prompt={String(previewData?.prompt || prompt || 'No prompt provided.')}
+                                                prompt={String(previewData?.prompt || prompt || ru.common.noPrompt)}
                                                 hint={String(previewData?.hints || hints || '')}
                                                 showHint={showHint}
                                                 onToggle={() => setShowHint(s => !s)}
@@ -854,58 +855,58 @@ export default function QuestionManager() {
                                             />
                                         </Box>
                                         <Tabs value={previewTab} onChange={(_, v) => setPreviewTab(v)} sx={{ mt: 1 }}>
-                                            <Tab label='Schema' />
-                                            <Tab label='Editor' />
+                                            <Tab label={ru.common.schema} sx={{ whiteSpace: 'normal' }} />
+                                            <Tab label={ru.common.editor} sx={{ whiteSpace: 'normal' }} />
                                         </Tabs>
                                         {previewTab === 0 && (
                                             <Box sx={{ color: 'text.secondary', fontSize: 14 }}>
-                                                <p style={{ margin: 0 }}>Schema</p>
+                                                <p style={{ margin: 0 }}>{ru.common.schema}</p>
                                                 <SchemaPreview sql={String(previewData?.initSql || initSql || '')} />
                                             </Box>
                                         )}
                                         {previewTab === 1 && (
-                                            <SqlEditor value={studentSql} onChange={setStudentSql} placeholder='-- Write your SQL here' />
+                                            <SqlEditor value={studentSql} onChange={setStudentSql} placeholder={ru.player.sqlPlaceholder} />
                                         )}
                                     </CardContent>
                                 </Card>
                                 {/* RIGHT: grading panel similar to student view */}
                                 <Card variant='outlined'>
-                                    <CardHeader title={<Typography variant='subtitle2'>Auto-Grader</Typography>} />
+                                    <CardHeader title={<Typography variant='subtitle2' sx={{ whiteSpace: 'normal' }}>{ru.player.autoGrader}</Typography>} />
                                     <CardContent sx={{ display: 'grid', gap: 1.25 }}>
                                         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-                                            <Button onClick={runPreviewGrade} disabled={grading || !studentSql.trim() || attemptsLeft <= 0} startIcon={<PlayArrowIcon />} variant='contained'>{grading ? 'Grading…' : 'Run'}</Button>
-                                            <Button variant='outlined' startIcon={<DoneIcon />} disabled>Submit</Button>
+                                            <Button onClick={runPreviewGrade} disabled={grading || !studentSql.trim() || attemptsLeft <= 0} startIcon={<PlayArrowIcon />} variant='contained' sx={{ whiteSpace: 'normal' }}>{grading ? ru.common.grading : ru.common.run}</Button>
+                                            <Button variant='outlined' startIcon={<DoneIcon />} disabled sx={{ whiteSpace: 'normal' }}>{ru.common.submit}</Button>
                                         </Box>
-                                        <Typography variant='caption' color='text.secondary'>Preview: results not persisted. Attempts allowed: {attemptsAllowed}. Used: {attemptsUsed}. Left: {attemptsLeft}.</Typography>
+                                        <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.player.previewNotSaved} {ru.player.attemptsMeta(attemptsAllowed, attemptsUsed, attemptsLeft)}</Typography>
                                         <Divider />
                                         <GradeDisplay grade={previewGrade} denom={previewData?.maxPoints ?? maxPoints} />
                                         <Divider />
                                         <RubricBars rubric={rubric} />
                                         <Divider />
-                                        <Typography variant='body2' color='text.secondary'>Feedback</Typography>
-                                        <FeedbackList feedback={previewFeedback} emptyText={grading ? 'Grading…' : 'No feedback yet.'} />
+                                        <Typography variant='body2' color='text.secondary'>{ru.common.feedback}</Typography>
+                                        <FeedbackList feedback={previewFeedback} emptyText={grading ? ru.questions.gradingNow : ru.questions.noFeedbackYet} />
                                     </CardContent>
                                 </Card>
                             </Box>
                         )}
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => { setPreviewOpen(false); setPreviewData(null); }}>Close</Button>
+                        <Button onClick={() => { setPreviewOpen(false); setPreviewData(null); }} sx={{ whiteSpace: 'normal' }}>{ru.common.close}</Button>
                     </DialogActions>
                 </Dialog>
 
                 {/* DATASET CREATE/MANAGE DIALOG */}
                 <Dialog open={datasetDlgOpen} onClose={() => setDatasetDlgOpen(false)} fullWidth maxWidth='md'>
-                    <DialogTitle>Create dataset</DialogTitle>
+                    <DialogTitle sx={{ whiteSpace: 'normal' }}>{ru.questions.createDataset}</DialogTitle>
                     <DialogContent dividers>
                         <Box sx={{ display: 'grid', gap: 2 }}>
-                            <TextField variant='outlined' label='Name' value={datasetName} onChange={e => setDatasetName(e.target.value)} />
-                            <MonospaceArea variant='outlined' label='Init SQL' value={datasetSql} onChange={e => setDatasetSql(e.target.value)} />
+                            <TextField variant='outlined' label={ru.questions.datasetName} value={datasetName} onChange={e => setDatasetName(e.target.value)} />
+                            <MonospaceArea variant='outlined' label={ru.questions.initSqlShort} value={datasetSql} onChange={e => setDatasetSql(e.target.value)} />
                         </Box>
                     </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setDatasetDlgOpen(false)}>Cancel</Button>
-                        <Button variant='contained' onClick={createDataset} disabled={!datasetName.trim() || !datasetSql.trim() || savingDataset}>{savingDataset ? 'Saving…' : 'Save'}</Button>
+                    <DialogActions sx={{ flexWrap: 'wrap' }}>
+                        <Button onClick={() => setDatasetDlgOpen(false)} sx={{ whiteSpace: 'normal' }}>{ru.common.cancel}</Button>
+                        <Button variant='contained' onClick={createDataset} disabled={!datasetName.trim() || !datasetSql.trim() || savingDataset} sx={{ whiteSpace: 'normal' }}>{savingDataset ? ru.common.saving : ru.common.save}</Button>
                     </DialogActions>
                 </Dialog>
 

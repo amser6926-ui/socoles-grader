@@ -20,8 +20,9 @@ import ClearIcon from '@mui/icons-material/ClearAll';
 import InsertLinkIcon from '@mui/icons-material/InsertLink';
 import ImageIcon from '@mui/icons-material/Image';
 import FunctionsIcon from '@mui/icons-material/Functions';
+import { m } from '@/i18n';
 
-export default function RichTextEditor({ value, onChange, label, minHeight = 220, placeholder = 'Write here…' }: { value: string; onChange: (html: string) => void; label?: string; minHeight?: number; placeholder?: string; }) {
+export default function RichTextEditor({ value, onChange, label, minHeight = 220, placeholder = m.rte.placeholder }: { value: string; onChange: (html: string) => void; label?: string; minHeight?: number; placeholder?: string; }) {
     const editor = useEditor({
         extensions: [
             StarterKit.configure({ codeBlock: {} }),
@@ -37,7 +38,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
         content: '',
         immediatelyRender: false,
         editorProps: {
-            attributes: { 'aria-label': label || 'Rich text editor' },
+            attributes: { 'aria-label': label || m.rte.aria },
         },
         onUpdate({ editor }) {
             onChange(editor.getHTML());
@@ -66,7 +67,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                 {/* Toolbar */}
                 <Box sx={{ p: 0.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
                     <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
-                        <Tooltip title="Bold">
+                        <Tooltip title={m.rte.bold}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -78,7 +79,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Italic">
+                        <Tooltip title={m.rte.italic}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -90,7 +91,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Strikethrough">
+                        <Tooltip title={m.rte.strike}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -106,7 +107,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                         <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
                         {/* Headings */}
-                        <Tooltip title="Headings">
+                        <Tooltip title={m.rte.headings}>
                             <ToggleButtonGroup size="small" exclusive value={['1', '2', '3'].find(l => editor?.isActive('heading', { level: Number(l) })) ?? null}>
                                 <ToggleButton value="1" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} selected={!!editor?.isActive('heading', { level: 1 })}>
                                     <TitleIcon fontSize="small" />1
@@ -122,7 +123,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
 
                         <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
-                        <Tooltip title="Bullet list">
+                        <Tooltip title={m.rte.bullets}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -133,7 +134,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Ordered list">
+                        <Tooltip title={m.rte.ordered}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -144,7 +145,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Block quote">
+                        <Tooltip title={m.rte.quote}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -159,7 +160,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                         <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
                         {/* Links & Images */}
-                        <Tooltip title={editor?.isActive('link') ? 'Edit link' : 'Add link'}>
+                        <Tooltip title={editor?.isActive('link') ? m.rte.editLink : m.rte.addLink}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -167,7 +168,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                     onClick={() => {
                                         if (!editor) return;
                                         const prev = editor.getAttributes('link')?.href as string | undefined;
-                                        const url = window.prompt('Enter URL', prev ?? 'https://');
+                                        const url = window.prompt(m.rte.enterUrl, prev ?? 'https://');
                                         if (url === null) return; // cancel
                                         if (url === '') {
                                             editor.chain().focus().unsetLink().run();
@@ -182,15 +183,15 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Insert image">
+                        <Tooltip title={m.rte.image}>
                             <span>
                                 <IconButton
                                     size="small"
                                     onClick={() => {
                                         if (!editor) return;
-                                        const src = window.prompt('Image URL (https://...)');
+                                        const src = window.prompt(m.rte.imageUrl);
                                         if (!src) return;
-                                        const alt = window.prompt('Alt text (optional)') ?? undefined;
+                                        const alt = window.prompt(m.rte.alt) ?? undefined;
                                         editor.chain().focus().setImage({ src, alt }).run();
                                     }}
                                 >
@@ -202,7 +203,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                         <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
                         {/* Math (TeX) helpers */}
-                        <Tooltip title="Inline math: wrap with $...$">
+                        <Tooltip title={m.rte.inlineMath}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -221,7 +222,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Block math: insert $$\n...\n$$">
+                        <Tooltip title={m.rte.blockMath}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -238,7 +239,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
 
                         <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
-                        <Tooltip title="Inline code">
+                        <Tooltip title={m.rte.inlineCode}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -249,7 +250,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Code block">
+                        <Tooltip title={m.rte.codeBlock}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -260,7 +261,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Horizontal rule">
+                        <Tooltip title={m.rte.rule}>
                             <span>
                                 <IconButton size="small" onClick={() => editor?.chain().focus().setHorizontalRule().run()}>
                                     <HorizontalRuleIcon fontSize="small" />
@@ -270,14 +271,14 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
 
                         <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
-                        <Tooltip title="Undo">
+                        <Tooltip title={m.rte.undo}>
                             <span>
                                 <IconButton size="small" onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().chain().focus().undo().run()}>
                                     <UndoIcon fontSize="small" />
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Redo">
+                        <Tooltip title={m.rte.redo}>
                             <span>
                                 <IconButton size="small" onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().chain().focus().redo().run()}>
                                     <RedoIcon fontSize="small" />
@@ -287,7 +288,7 @@ export default function RichTextEditor({ value, onChange, label, minHeight = 220
 
                         <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
-                        <Tooltip title="Clear formatting">
+                        <Tooltip title={m.rte.clear}>
                             <span>
                                 <IconButton size="small" onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}>
                                     <ClearIcon fontSize="small" />

@@ -4,6 +4,7 @@ import { Box, Chip, Typography, IconButton, Tooltip } from '@mui/material';
 import TileCard from '@/components/TileCard';
 import DifficultyChip from './DifficultyChip';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { m, statusLabel } from '@/i18n';
 
 export interface QuestionCardProps {
     id: string;
@@ -26,9 +27,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ id, title, difficult
     const isSel = !!selected;
     return (
         <TileCard
-            title={title || 'Untitled'}
+            title={title || m.common.untitled}
             headerRight={onMenu ? (
-                <Tooltip title='Actions'>
+                <Tooltip title={m.questionCard.actions}>
                     <IconButton size='small' onClick={(e) => { e.stopPropagation(); onMenu(e, id); }}>
                         <MoreVertIcon fontSize='small' />
                     </IconButton>
@@ -36,7 +37,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ id, title, difficult
             ) : undefined}
             chips={[
                 <DifficultyChip key="difficulty" value={difficulty} />,
-                <Chip key="status" label={status} size='small' sx={(theme) => {
+                <Chip key="status" label={statusLabel(status)} size='small' sx={(theme) => {
                     if (status === 'Published') {
                         return {
                             fontWeight: 500,
@@ -63,10 +64,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ id, title, difficult
                         borderColor: theme.palette.mode === 'dark' ? 'rgba(255,210,150,0.4)' : 'rgba(255,170,80,0.4)'
                     };
                 }} variant='outlined' />,
-                <Chip key="points" label={`${maxPoints} pts`} size='small' variant='outlined' />,
-                <Chip key="grading" label={useDefaultGrading === false ? 'Custom' : 'Default'} size='small' variant='outlined' color={useDefaultGrading === false ? 'secondary' : 'default'} />,
-                <Tooltip key="attempts" title='Unique students who achieved full credit (or auto-graded credit) for this question'>
-                    <Chip label={`Attempts: ${attempts}`} size='small' variant='outlined' />
+                <Chip key="points" label={m.common.pts(maxPoints)} size='small' variant='outlined' />,
+                <Chip key="grading" label={useDefaultGrading === false ? m.common.custom : m.common.defaultGrading} size='small' variant='outlined' color={useDefaultGrading === false ? 'secondary' : 'default'} />,
+                <Tooltip key="attempts" title={m.questions.fullCreditTip}>
+                    <Chip label={m.common.attemptsCount(attempts)} size='small' variant='outlined' />
                 </Tooltip>
             ]}
             onClick={() => onSelect && onSelect(id)}

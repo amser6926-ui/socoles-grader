@@ -13,6 +13,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { formatDateTimeDDMMYYYYHHmm } from '@/lib/format';
 import type { AssignmentWithQuestions, QuestionSubmissionAttempt } from '@/lib/types';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m as ru } from '@/i18n';
 
 interface ReviewProps {
     assignmentId: string | null;
@@ -94,16 +95,16 @@ export default function StudentSubmissionReview({ assignmentId, onClose }: Revie
                     const final = mine.find((s: any) => ['Submitted', 'Auto-graded', 'Needs review'].includes(s.status));
                     submissionId = final?.id || null;
                 }
-                if (!submissionId) throw new Error('No submission');
+                if (!submissionId) throw new Error(ru.reviewStudent.noSubmission);
                 // get question_submissions for this submission
                 const qsubsRes = await authFetch(`/api/question-submissions?submissionId=${encodeURIComponent(submissionId)}`);
-                if (!qsubsRes.ok) throw new Error('No question submissions');
+                if (!qsubsRes.ok) throw new Error(ru.reviewStudent.noQuestionSubmissions);
                 const qsubs = await qsubsRes.json();
                 const qs = (qsubs || []).find((x: any) => x.questionId === currentQuestion.id);
                 const qsId = qs?.id;
-                if (!qsId) throw new Error('Missing question submission');
+                if (!qsId) throw new Error(ru.reviewStudent.missingQuestion);
                 const histRes = await authFetch(`/api/question-submissions?historyOf=${qsId}`);
-                if (!histRes.ok) throw new Error('History error');
+                if (!histRes.ok) throw new Error(ru.reviewStudent.historyError);
                 const attempts: QuestionSubmissionAttempt[] = await histRes.json();
                 setHistoryMap(m => ({ ...m, [qid]: { loading: false, attempts } }));
                 setAttemptTab(attempts.length ? attempts.length - 1 : 0);
@@ -199,28 +200,28 @@ export default function StudentSubmissionReview({ assignmentId, onClose }: Revie
     const activeAttempt = attempts[Math.min(Math.max(0, attemptTab), Math.max(0, attempts.length - 1))] || null;
 
     if (!assignmentId) return null;
-    if (loading) return <Card sx={{ p: 3 }}><Typography>Loading submission…</Typography></Card>;
-    if (!assignment) return <Card sx={{ p: 3 }}><Typography>Assignment not found.</Typography><Button sx={{ mt: 1 }} onClick={onClose}>Close</Button></Card>;
+    if (loading) return <Card sx={{ p: 3 }}><Typography>{ru.reviewStudent.loading}</Typography></Card>;
+    if (!assignment) return <Card sx={{ p: 3 }}><Typography>{ru.player.notFound}</Typography><Button sx={{ mt: 1 }} onClick={onClose}>{ru.common.close}</Button></Card>;
 
     return (
         <Card sx={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <CardHeader
                 title={<Typography variant='subtitle1'>{assignment.title}</Typography>}
-                subheader={<Typography variant='caption' color='text.secondary'>Question {activeIdx + 1} of {questions.length} • Review</Typography>}
-                action={<Button size='small' onClick={onClose}>Close</Button>}
+                subheader={<Typography variant='caption' color='text.secondary'>{ru.reviewStudent.questionOf(activeIdx + 1, questions.length)}{ru.reviewStudent.reviewMark}</Typography>}
+                action={<Button size='small' onClick={onClose}>{ru.common.close}</Button>}
             />
             <CardContent sx={{ display: 'grid', gap: 2, gridTemplateColumns: { lg: '1fr 340px' } }}>
                 <Box>
                     <Typography variant='subtitle2' sx={{ mb: .5 }}>{currentQuestion?.title}</Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                         {currentQuestion?.difficulty && <DifficultyChip value={currentQuestion.difficulty} size='small' />}
-                        {currentQuestion?.pointsOverride != null ? <Chip size='small' label={`${currentQuestion.pointsOverride} pts`} color='primary' /> : <Chip size='small' label={`${currentQuestion?.maxPoints} pts`} />}
-                        {typeof activeAttempt?.attempt === 'number' && <Chip size='small' label={`Attempt ${activeAttempt.attempt}`} />}
-                        {requestForCurrent && <Chip size='small' color={requestForCurrent.status === 'Pending' ? 'warning' : 'success'} label={requestForCurrent.status === 'Pending' ? 'Review requested' : 'Review resolved'} />}
+                        {currentQuestion?.pointsOverride != null ? <Chip size='small' label={ru.common.pts(currentQuestion.pointsOverride)} color='primary' /> : <Chip size='small' label={ru.common.pts(currentQuestion?.maxPoints ?? '—')} />}
+                        {typeof activeAttempt?.attempt === 'number' && <Chip size='small' label={ru.common.attemptN(activeAttempt.attempt)} />}
+                        {requestForCurrent && <Chip size='small' color={requestForCurrent.status === 'Pending' ? 'warning' : 'success'} label={requestForCurrent.status === 'Pending' ? ru.reviewStudent.requested : ru.reviewStudent.resolved} />}
                     </Box>
                     {/* Full prompt content first */}
                     <PromptWithHint
-                        prompt={String(questionDetail?.prompt || 'No prompt provided.')}
+                        prompt={String(questionDetail?.prompt || ru.common.noPrompt)}
                         hint={String(questionDetail?.hints || '')}
                         showHint={false}
                         onToggle={() => { }}
@@ -229,8 +230,8 @@ export default function StudentSubmissionReview({ assignmentId, onClose }: Revie
                     />
                     {/* Schema / Editor tabs now below content */}
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mt: 2, mb: 1 }}>
-                        <Tab label='Schema' />
-                        <Tab label='Editor' />
+                        <Tab label={ru.common.schema} />
+                        <Tab label={ru.common.editor} />
                     </Tabs>
                     {tab === 0 && (
                         <Box sx={{ color: 'text.secondary', fontSize: 14 }}>
@@ -238,30 +239,30 @@ export default function StudentSubmissionReview({ assignmentId, onClose }: Revie
                         </Box>
                     )}
                     {tab === 1 && (
-                        <SqlEditor value={(activeAttempt?.sql) || ''} onChange={() => { }} readOnly minRows={10} placeholder='-- no SQL' />
+                        <SqlEditor value={(activeAttempt?.sql) || ''} onChange={() => { }} readOnly minRows={10} placeholder={ru.reviewStudent.noSql} />
                     )}
                     {/* Review request action (only if finished submission) */}
                     {submissionId && !requestForCurrent && (
                         <Box sx={{ mt: 2 }}>
-                            <Button size='small' variant='outlined' onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReviewDialogOpen(true); }}>Request instructor review</Button>
+                            <Button size='small' variant='outlined' onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReviewDialogOpen(true); }}>{ru.reviewStudent.request}</Button>
                         </Box>
                     )}
                     {requestForCurrent && (
                         <Box sx={{ mt: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'grid', gap: .75 }}>
-                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600 }}>Review Thread</Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600 }}>{ru.reviewStudent.thread}</Typography>
                             <Box sx={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: .75, pr: .5 }}>
                                 {threadMessages.map(m => (
                                     <Box key={m.id} sx={{ alignSelf: m.senderRole === 'instructor' ? 'flex-end' : 'flex-start', maxWidth: '80%', p: .75, borderRadius: 1, bgcolor: m.senderRole === 'instructor' ? 'secondary.light' : 'grey.100', border: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant='caption' sx={{ display: 'block', fontWeight: 600 }}>{m.senderRole === 'instructor' ? 'Instructor' : 'You'}</Typography>
+                                        <Typography variant='caption' sx={{ display: 'block', fontWeight: 600 }}>{m.senderRole === 'instructor' ? ru.reviewStudent.instructor : ru.reviewStudent.you}</Typography>
                                         <Typography variant='caption' sx={{ display: 'block', whiteSpace: 'pre-wrap' }}>{m.message}</Typography>
                                     </Box>
                                 ))}
-                                {!threadMessages.length && <Typography variant='caption' color='text.secondary'>No messages yet.</Typography>}
+                                {!threadMessages.length && <Typography variant='caption' color='text.secondary'>{ru.reviewStudent.noMessages}</Typography>}
                             </Box>
                             {requestForCurrent.status === 'Pending' && (
                                 <Box sx={{ display: 'grid', gap: .5 }}>
-                                    <TextField size='small' multiline minRows={2} placeholder='Type a reply...' value={messageDraft} onChange={e => setMessageDraft(e.target.value)} />
-                                    <Button size='small' variant='outlined' disabled={sending || !messageDraft.trim()} onClick={sendMessage}>{sending ? 'Sending…' : 'Send'}</Button>
+                                    <TextField size='small' multiline minRows={2} placeholder={ru.reviewStudent.replyPlaceholder} value={messageDraft} onChange={e => setMessageDraft(e.target.value)} />
+                                    <Button size='small' variant='outlined' disabled={sending || !messageDraft.trim()} onClick={sendMessage}>{sending ? ru.reviewStudent.sending : ru.reviewStudent.send}</Button>
                                 </Box>
                             )}
                         </Box>
@@ -279,26 +280,26 @@ export default function StudentSubmissionReview({ assignmentId, onClose }: Revie
                                 absent: activeAttempt?.rubric?.absent
                             }} />
                             <Box sx={{ mt: 2 }}>
-                                <Typography variant='body2' color='text.secondary'>Feedback</Typography>
-                                <FeedbackList feedback={Array.isArray(activeAttempt?.feedback) ? activeAttempt.feedback : []} emptyText='No feedback.' />
+                                <Typography variant='body2' color='text.secondary'>{ru.common.feedback}</Typography>
+                                <FeedbackList feedback={Array.isArray(activeAttempt?.feedback) ? activeAttempt.feedback : []} emptyText={ru.player.noFeedback} />
                             </Box>
                             <Divider sx={{ my: 1.5 }} />
                             <Box>
-                                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>Attempts</Typography>
+                                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>{ru.common.attempts}</Typography>
                                 {(() => {
-                                    if (historyMap[currentQuestion?.id || '']?.loading) return <Typography variant='caption' color='text.secondary' sx={{ display: 'inline-flex', alignItems: 'center', gap: .75 }}><CircularProgress size={12} /> Loading…</Typography>;
-                                    if (!attempts.length) return <Typography variant='caption' color='text.secondary'>No attempts.</Typography>;
+                                    if (historyMap[currentQuestion?.id || '']?.loading) return <Typography variant='caption' color='text.secondary' sx={{ display: 'inline-flex', alignItems: 'center', gap: .75 }}><CircularProgress size={12} /> {ru.common.loading}</Typography>;
+                                    if (!attempts.length) return <Typography variant='caption' color='text.secondary'>{ru.reviewStudent.noAttempts}</Typography>;
                                     return (
                                         <Box>
                                             <Tabs value={Math.min(attemptTab, attempts.length - 1)} onChange={(_, v) => setAttemptTab(v)} variant='scrollable' scrollButtons='auto' sx={{ mb: 1 }}>
-                                                {attempts.map((a, i) => (<Tab key={a.id} label={`Attempt ${a.attempt}`} value={i} />))}
+                                                {attempts.map((a, i) => (<Tab key={a.id} label={ru.common.attemptN(a.attempt)} value={i} />))}
                                             </Tabs>
                                             <Box sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: .5 }}>
-                                                    <Typography variant='subtitle2'>Attempt {activeAttempt?.attempt}</Typography>
+                                                    <Typography variant='subtitle2'>{ru.common.attemptN(activeAttempt?.attempt ?? '')}</Typography>
                                                     <Typography variant='caption' color='text.secondary'>{activeAttempt?.createdAt ? formatDateTimeDDMMYYYYHHmm(activeAttempt.createdAt) : ''}</Typography>
                                                 </Box>
-                                                <Typography variant='caption' color='text.secondary'>Select a tab above to switch attempts.</Typography>
+                                                <Typography variant='caption' color='text.secondary'>{ru.player.selectAttempt}</Typography>
                                             </Box>
                                         </Box>
                                     );
@@ -309,28 +310,28 @@ export default function StudentSubmissionReview({ assignmentId, onClose }: Revie
                     <Card variant='outlined'>
                         <CardContent>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
-                                <Button size='small' startIcon={<ArrowBackIcon />} disabled={activeIdx === 0} onClick={() => setActiveIdx(i => Math.max(i - 1, 0))}>Previous</Button>
-                                <Button size='small' endIcon={<ArrowForwardIcon />} disabled={activeIdx === (questions.length - 1)} onClick={() => setActiveIdx(i => Math.min(i + 1, questions.length - 1))}>Next</Button>
+                                <Button size='small' startIcon={<ArrowBackIcon />} disabled={activeIdx === 0} onClick={() => setActiveIdx(i => Math.max(i - 1, 0))}>{ru.common.previous}</Button>
+                                <Button size='small' endIcon={<ArrowForwardIcon />} disabled={activeIdx === (questions.length - 1)} onClick={() => setActiveIdx(i => Math.min(i + 1, questions.length - 1))}>{ru.common.next}</Button>
                             </Box>
-                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1 }}>Navigate questions.</Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1 }}>{ru.player.navigate}</Typography>
                         </CardContent>
                     </Card>
                 </Box>
             </CardContent>
             <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant='caption' color='text.secondary'>Progress {activeIdx + 1}/{questions.length} • Review</Typography>
+                <Typography variant='caption' color='text.secondary'>{ru.reviewStudent.progress(activeIdx + 1, questions.length)}</Typography>
             </CardActions>
             {reviewDialogOpen && currentQuestion && (
                 <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, bgcolor: 'rgba(0,0,0,0.35)' }} onClick={() => setReviewDialogOpen(false)}>
                     <Card sx={{ width: 420, maxWidth: '100%', p: 2 }} onClick={(e) => e.stopPropagation()}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>Request Review</Typography>
-                        <Typography variant='caption' color='text.secondary'>Explain why this question should be reviewed. Be specific.</Typography>
+                        <Typography variant='subtitle2' sx={{ mb: 1 }}>{ru.reviewStudent.dialogTitle}</Typography>
+                        <Typography variant='caption' color='text.secondary'>{ru.reviewStudent.dialogHelp}</Typography>
                         <Box component='textarea' value={reviewComment} onChange={(e: any) => setReviewComment(e.target.value)}
                             rows={5}
                             style={{ width: '100%', marginTop: 12, resize: 'vertical', fontFamily: 'inherit', fontSize: 14, padding: 8, borderRadius: 6, border: '1px solid rgba(0,0,0,0.2)' }}
                         />
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
-                            <Button size='small' onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
+                            <Button size='small' onClick={() => setReviewDialogOpen(false)}>{ru.common.cancel}</Button>
                             <Button size='small' variant='contained' disabled={!reviewComment.trim()} onClick={async () => {
                                 if (!assignment?.id || !currentQuestion?.id || !submissionId) return;
                                 try {
@@ -342,7 +343,7 @@ export default function StudentSubmissionReview({ assignmentId, onClose }: Revie
                                         setReviewComment('');
                                     }
                                 } catch { /* ignore */ }
-                            }}>Submit</Button>
+                            }}>{ru.common.submit}</Button>
                         </Box>
                     </Card>
                 </Box>

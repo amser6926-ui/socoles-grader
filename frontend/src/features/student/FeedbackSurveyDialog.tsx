@@ -1,5 +1,6 @@
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Slider, TextField, Box, Stack } from '@mui/material';
 import { useState, useEffect } from 'react';
+import { formatNumber, m } from '@/i18n';
 
 interface Props {
     open: boolean;
@@ -63,32 +64,32 @@ export default function FeedbackSurveyDialog({ open, assignmentId, assignmentTit
 
     return (
         <Dialog open={open} onClose={() => { }} fullWidth maxWidth="sm">
-            <DialogTitle>Quick Feedback {assignmentTitle ? <Typography component="span" variant="subtitle2" sx={{ ml: 1, fontWeight: 400, color: 'text.secondary' }}>• {assignmentTitle}</Typography> : null}</DialogTitle>
+            <DialogTitle>{m.survey.title} {assignmentTitle ? <Typography component="span" variant="subtitle2" sx={{ ml: 1, fontWeight: 400, color: 'text.secondary' }}>• {assignmentTitle}</Typography> : null}</DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
-                <Typography variant="body2" color="text.secondary">Required (takes &lt; 10s). Helps improve the system.</Typography>
+                <Typography variant="body2" color="text.secondary">{m.survey.required}</Typography>
                 {improvement != null && (
                     <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mb: 0.75 }}>Your improvement</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mb: 0.75 }}>{m.survey.yourImprovement}</Typography>
                         {(() => {
                             const a = typeof firstScore === 'number' ? firstScore : null;
                             const b = typeof finalScore === 'number' ? finalScore : null;
                             const isPercentScale = Math.max(a ?? 0, b ?? 0) <= 1;
-                            const fmt = (v: number | null) => v == null ? '—' : (isPercentScale ? `${(v * 100).toFixed(1)}%` : `${v.toFixed(2)}/10`);
+                            const fmt = (v: number | null) => v == null ? '—' : (isPercentScale ? `${formatNumber(v * 100, 1)}%` : `${formatNumber(v, 2)}/10`);
                             const delta = (a != null && b != null) ? (b - a) : null;
-                            const deltaText = delta == null ? '—' : (isPercentScale ? `${(delta * 100).toFixed(1)} pp` : `${delta.toFixed(2)}`);
+                            const deltaText = delta == null ? '—' : (isPercentScale ? `${formatNumber(delta * 100, 1)} п.п.` : `${formatNumber(delta, 2)}`);
                             const deltaColor = !delta ? 'text.secondary' : (delta > 0 ? 'success.main' : (delta < 0 ? 'error.main' : 'text.secondary'));
                             return (
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1 }}>
                                     <Box sx={{ p: 1, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="text.secondary">First</Typography>
+                                        <Typography variant="caption" color="text.secondary">{m.survey.first}</Typography>
                                         <Typography variant="subtitle2">{fmt(a)}</Typography>
                                     </Box>
                                     <Box sx={{ p: 1, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="text.secondary">Final</Typography>
+                                        <Typography variant="caption" color="text.secondary">{m.survey.final}</Typography>
                                         <Typography variant="subtitle2">{fmt(b)}</Typography>
                                     </Box>
                                     <Box sx={{ p: 1, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="text.secondary">Change</Typography>
+                                        <Typography variant="caption" color="text.secondary">{m.survey.change}</Typography>
                                         <Typography variant="subtitle2" sx={{ color: deltaColor }}>{deltaText}</Typography>
                                     </Box>
                                 </Box>
@@ -97,17 +98,17 @@ export default function FeedbackSurveyDialog({ open, assignmentId, assignmentTit
                     </Box>
                 )}
                 <Box>
-                    <Typography variant="subtitle2" gutterBottom>The automated feedback helped me correct my SQL mistakes.</Typography>
+                    <Typography variant="subtitle2" gutterBottom>{m.survey.helped}</Typography>
                     <Slider value={helpedFix ?? 0} min={1} max={5} step={1} marks={sliderMarks()} onChange={(_, v) => setHelpedFix(v as number)} />
                 </Box>
                 <Box>
-                    <Typography variant="subtitle2" gutterBottom>The automated feedback enhanced my understanding of the assessed concepts.</Typography>
+                    <Typography variant="subtitle2" gutterBottom>{m.survey.understood}</Typography>
                     <Slider value={improvedUnderstanding ?? 0} min={1} max={5} step={1} marks={sliderMarks()} onChange={(_, v) => setImprovedUnderstanding(v as number)} />
                 </Box>
-                <TextField label="Optional: Further comments?" value={comment} onChange={e => setComment(e.target.value)} multiline minRows={2} />
+                <TextField label={m.survey.comments} value={comment} onChange={e => setComment(e.target.value)} multiline minRows={2} />
             </DialogContent>
             <DialogActions>
-                <Button disabled={disabled || helpedFix == null || improvedUnderstanding == null} variant="contained" onClick={handleSubmit}>Submit</Button>
+                <Button disabled={disabled || helpedFix == null || improvedUnderstanding == null} variant="contained" onClick={handleSubmit}>{m.survey.submit}</Button>
             </DialogActions>
         </Dialog>
     );

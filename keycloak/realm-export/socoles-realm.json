@@ -4,6 +4,9 @@
     "registrationAllowed": true,
     "loginWithEmailAllowed": true,
     "resetPasswordAllowed": true,
+    "internationalizationEnabled": true,
+    "supportedLocales": ["ru", "en"],
+    "defaultLocale": "ru",
     "sslRequired": "none",
     "clients": [
         {

@@ -1,12 +1,13 @@
 "use client";
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { displayFeedback } from '@/i18n';
 
 export default function FeedbackList({ feedback, emptyText }: { feedback: string[]; emptyText: string }) {
     return feedback.length ? (
         <Box component='ul' sx={{ pl: 2.25, my: 0, listStyle: 'none' }}>
             {feedback.map((f, i) => (
-                <li key={i}><Typography variant='body2' sx={{ whiteSpace: 'pre-line' }}>{f}</Typography></li>
+                <li key={i}><Typography variant='body2' sx={{ whiteSpace: 'pre-line' }}>{displayFeedback(f)}</Typography></li>
             ))}
         </Box>
     ) : (

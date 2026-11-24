@@ -40,6 +40,20 @@ Open the admin console at http://localhost:8080/ and login with the admin creden
 
 The realm has no predefined users. Use the **Register** option on the Keycloak login page to create one.
 
+## Russian login screens
+
+`realm-export/socoles-realm.json` enables Keycloak internationalization for new imports:
+
+- `internationalizationEnabled`: `true`
+- `supportedLocales`: `ru`, `en`
+- `defaultLocale`: `ru`
+
+The built-in Keycloak login theme already contains Russian strings, so no custom theme is shipped. English remains available from the language switcher on the login page.
+
+This export is applied only when Keycloak’s database is initialized. An existing realm is not updated by pulling this file. To turn Russian on for a realm that is already running, open the admin console → Realm settings → Localization, enable internationalization, add `ru` and `en`, and set the default locale to `ru`. Recreating the Keycloak volume also picks up the export, and it deletes realm users. Client secrets and admin passwords are unchanged.
+
+Keycloak account emails (password reset, verify email) follow the realm locale. SOCOLES course-invite mail is sent by the app, not by Keycloak.
+
 ## Production notes
 
 - Replace `http://localhost:3000` with your public origin (e.g., `https://socoles.cs.ru.nl`) in NEXTAUTH_URL and KEYCLOAK_LOGOUT_REDIRECT_URI.

@@ -61,17 +61,21 @@ export const PageCard: React.FC<PageCardProps> = ({ children, noPadding, headerT
                     mb: 1 // space below header so content isn't flush
                 }}>
                     <Box sx={{
-                        height: headerHeight,
+                        minHeight: headerHeight,
+                        height: 'auto',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: 2,
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        rowGap: 0.75,
                         px: 2,
+                        py: 0.75,
                         background: `linear-gradient(90deg, ${gradientFrom}, ${gradientTo})`,
                         color: 'primary.contrastText'
                     }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                            {typeof headerTitle === 'string' ? <Typography variant='subtitle1' sx={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{headerTitle}</Typography> : headerTitle}
+                            {typeof headerTitle === 'string' ? <Typography variant='subtitle1' sx={{ fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.3 }}>{headerTitle}</Typography> : headerTitle}
                         </Box>
                         {headerActions && (
                             <Box

@@ -1,6 +1,12 @@
 // src/theme/theme.ts
 'use client';
 import { createTheme, darken } from '@mui/material/styles';
+import { ruRU } from '@mui/material/locale';
+import { ruRU as ruRUPickers } from '@mui/x-date-pickers/locales';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
+
+dayjs.locale('ru');
 
 const theme = createTheme({
     palette: {
@@ -18,7 +24,7 @@ const theme = createTheme({
     },
     shape: { borderRadius: 3 },
     typography: {
-        fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+        fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif',
     },
     components: {
         MuiPaper: {
@@ -82,7 +88,7 @@ const theme = createTheme({
             },
         },
 
-        MuiButton: { styleOverrides: { root: { borderRadius: 5 } } },
+        MuiButton: { styleOverrides: { root: { borderRadius: 5, textTransform: 'none' } } },
         MuiDivider: { styleOverrides: { root: { opacity: 1 } } },
         MuiListItemButton: {
             styleOverrides: {
@@ -103,6 +109,6 @@ const theme = createTheme({
             },
         },
     },
-});
+}, ruRU, ruRUPickers);
 
 export default theme;

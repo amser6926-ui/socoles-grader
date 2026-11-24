@@ -3,6 +3,7 @@ import Grid from '@mui/material/Grid';
 import { Card, CardHeader, CardContent, Typography, TextField, Alert, LinearProgress, Box } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m } from '@/i18n';
 
 export default function StudentProfile() {
     const { user, authFetch } = useAuth();
@@ -37,17 +38,17 @@ export default function StudentProfile() {
             <Grid container spacing={2}>
                 <Grid size={12}>
                     <Card>
-                        <CardHeader title="Account" subheader="Your name and email are managed by your instructor." />
+                        <CardHeader title={m.profile.title} subheader={m.profile.sub} />
                         {busy && <LinearProgress />}
                         <CardContent>
                             {note && <Alert severity="success" sx={{ mb: 2 }}>{note}</Alert>}
                             {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
                             <Grid container spacing={2}>
                                 <Grid size={{ xs: 12, md: 6 }}>
-                                    <TextField label="Full name" size="small" value={fullName} disabled variant="outlined" fullWidth />
+                                    <TextField label={m.profile.fullName} size="small" value={fullName} disabled variant="outlined" fullWidth />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: 6 }}>
-                                    <TextField label="Email" size="small" value={email} disabled variant="outlined" fullWidth />
+                                    <TextField label={m.profile.email} size="small" value={email} disabled variant="outlined" fullWidth />
                                 </Grid>
                             </Grid>
                         </CardContent>

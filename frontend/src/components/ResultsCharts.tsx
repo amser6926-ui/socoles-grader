@@ -13,6 +13,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useTheme } from '@mui/material/styles';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m as ru, uiError, formatNumber, formatPercent } from '@/i18n';
 
 interface ResultsChartsProps {
     results?: any[];
@@ -78,7 +79,7 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
     }) : [];
 
     // Normalize grades 0..1 and compute aggregates
-    const dist = Array.from({ length: 11 }, (_, i) => ({ bin: (i / 10).toFixed(1), n: 0 })); // bins labeled 0.0..1.0
+    const dist = Array.from({ length: 11 }, (_, i) => ({ bin: formatNumber(i / 10, 1), n: 0 })); // bins labeled 0.0..1.0
     const normalizedGrades: number[] = [];
     const answers: string[] = [];
 
@@ -112,8 +113,8 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
     const pass = normalizedGrades.filter((g) => g >= 0.6).length;
     const fail = normalizedGrades.filter((g) => g < 0.6).length;
     const passFailData = [
-        { id: 0, value: pass, label: 'Pass' },
-        { id: 1, value: fail, label: 'Fail' },
+        { id: 0, value: pass, label: ru.charts.pass },
+        { id: 1, value: fail, label: ru.charts.fail },
     ];
 
     // Colors for bars (11 bins)
@@ -161,7 +162,7 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
         attemptAugmented.forEach((q: any, idx: number) => {
             const qid = String(q.questionId ?? q.question_id ?? '');
             if (!qid) return;
-            const label = String(q.title ?? q.question ?? q.name ?? q['Q #'] ?? `Question ${idx + 1}`);
+            const label = String(q.title ?? q.question ?? q.name ?? q['Q #'] ?? ru.charts.qLabel(idx + 1));
             if (!byQ.has(qid)) byQ.set(qid, label);
         });
         return Array.from(byQ.entries()).map(([id, label]) => ({ id, label }));
@@ -244,9 +245,9 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
     const first = progressDataset[0];
     const best = progressDataset.reduce((acc, r) => r.grade > (acc?.grade ?? -1) ? r : acc, first || null);
     const radarData = (first && best) ? [
-        { axis: 'Syntax', first: first.syntax ?? 0, best: best.syntax ?? first.syntax ?? 0 },
-        { axis: 'Semantics', first: first.semantics ?? 0, best: best.semantics ?? first.semantics ?? 0 },
-        { axis: 'Results', first: first.results ?? 0, best: best.results ?? first.results ?? 0 },
+        { axis: ru.charts.syntax, first: first.syntax ?? 0, best: best.syntax ?? first.syntax ?? 0 },
+        { axis: ru.charts.semantics, first: first.semantics ?? 0, best: best.semantics ?? first.semantics ?? 0 },
+        { axis: ru.charts.results, first: first.results ?? 0, best: best.results ?? first.results ?? 0 },
     ] : [];
     // Cumulative mastery (step) – max grade reached after each attempt.
     const cumulDataset = progressDataset.map((r, i) => ({ attempt: r.attempt, bestSoFar: Math.max(...progressDataset.slice(0, i + 1).map(x => x.grade)) }));
@@ -288,78 +289,78 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
         return (
             <Box sx={{ display: 'grid', gap: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                    <Typography variant='h6'>Attempt Progress Analytics</Typography>
+                    <Typography variant='h6' sx={{ whiteSpace: 'normal' }}>{ru.charts.title}</Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         {Array.isArray(attemptAugmented) && attemptAugmented.length > 1 && (
                             <FormControl size='small' sx={{ minWidth: 220 }}>
-                                <InputLabel id='attempt-q-filter-label'>Question</InputLabel>
+                                <InputLabel id='attempt-q-filter-label'>{ru.charts.question}</InputLabel>
                                 <Select
                                     labelId='attempt-q-filter-label'
-                                    label='Question'
+                                    label={ru.charts.question}
                                     value={selectedQuestionId}
                                     onChange={(e) => setSelectedQuestionId(e.target.value)}
                                 >
-                                    <MenuItem value='all'><em>All questions</em></MenuItem>
+                                    <MenuItem value='all'><em>{ru.charts.allQuestions}</em></MenuItem>
                                     {questionOptions.map(q => (
-                                        <MenuItem key={q.id} value={q.id}>{q.label}</MenuItem>
+                                        <MenuItem key={q.id} value={q.id} sx={{ whiteSpace: 'normal' }}>{q.label}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         )}
-                        <Button size='small' onClick={() => toggleAdvanced(false)}>Back</Button>
+                        <Button size='small' onClick={() => toggleAdvanced(false)} sx={{ whiteSpace: 'normal' }}>{ru.charts.back}</Button>
                     </Box>
                 </Box>
                 {!loadingAttempts && Array.isArray(baseResults) && (
-                    <Typography variant='caption' color='text.secondary'>
-                        {`Questions: ${attemptsSummary?.perQuestion?.length || 0} • Students: ${new Set((baseResults as any[]).map(a => a.student)).size} • Attempt records: ${attemptsSummary?.totalHist || 0}`}
+                    <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>
+                        {ru.charts.summary(attemptsSummary?.perQuestion?.length || 0, new Set((baseResults as any[]).map(a => a.student)).size, attemptsSummary?.totalHist || 0)}
                     </Typography>
                 )}
                 {/* Per-student toggle removed per requirement; cohort only */}
                 <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' } }}>
                     <Card>
-                        <CardHeader title={<Typography variant='subtitle1'>Attempt Progress</Typography>} subheader={<Typography variant='caption'>Overall + rubric lines</Typography>} />
+                        <CardHeader title={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{ru.charts.progress}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.progressHelp}</Typography>} />
                         <CardContent>
                             {progressDataset.length ? (
-                                <LineChart height={260} margin={{ top: 7, right: 7, bottom: 2, left: 0 }} dataset={progressDataset} xAxis={[{ dataKey: 'attempt', label: 'Attempt' }]} yAxis={[{ label: 'Average Grade / Rubric' }]} series={[
-                                    { dataKey: 'grade', label: 'Grade', color: theme.palette.primary.main },
-                                    ...(progressDataset.some(r => r.syntax != null) ? [{ dataKey: 'syntax', label: 'Syntax', color: theme.palette.success.main }] : []),
-                                    ...(progressDataset.some(r => r.semantics != null) ? [{ dataKey: 'semantics', label: 'Semantics', color: theme.palette.warning.main }] : []),
-                                    ...(progressDataset.some(r => r.results != null) ? [{ dataKey: 'results', label: 'Results', color: theme.palette.info.main }] : []),
+                                <LineChart height={260} margin={{ top: 8, right: 12, bottom: 36, left: 56 }} dataset={progressDataset} xAxis={[{ dataKey: 'attempt', label: ru.charts.attempt }]} yAxis={[{ label: ru.charts.avgGrade }]} series={[
+                                    { dataKey: 'grade', label: ru.charts.grade, color: theme.palette.primary.main },
+                                    ...(progressDataset.some(r => r.syntax != null) ? [{ dataKey: 'syntax', label: ru.charts.syntax, color: theme.palette.success.main }] : []),
+                                    ...(progressDataset.some(r => r.semantics != null) ? [{ dataKey: 'semantics', label: ru.charts.semantics, color: theme.palette.warning.main }] : []),
+                                    ...(progressDataset.some(r => r.results != null) ? [{ dataKey: 'results', label: ru.charts.results, color: theme.palette.info.main }] : []),
                                 ]} />
-                            ) : <Typography variant='caption' color='text.secondary'>No attempts found.</Typography>}
+                            ) : <Typography variant='caption' color='text.secondary'>{ru.charts.noAttempts}</Typography>}
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader title={<Typography variant='subtitle1'>Improvement Deltas</Typography>} subheader={<Typography variant='caption'>Change vs previous attempt</Typography>} />
+                        <CardHeader title={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{ru.charts.deltas}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.deltasHelp}</Typography>} />
                         <CardContent>
                             {deltaDataset.length ? (
-                                <BarChart height={260} margin={{ top: 7, right: 7, bottom: 2, left: 0 }} dataset={deltaDataset} xAxis={[{ dataKey: 'attempt', label: 'Attempt' }]} yAxis={[{ label: 'Δ Grade / Rubric' }]} series={[
-                                    { dataKey: 'gradeDelta', label: 'Grade Δ', color: theme.palette.primary.main },
-                                    ...(deltaDataset.some(d => d.syntaxDelta !== 0) ? [{ dataKey: 'syntaxDelta', label: 'Syntax Δ', color: theme.palette.success.main }] : []),
-                                    ...(deltaDataset.some(d => d.semanticsDelta !== 0) ? [{ dataKey: 'semanticsDelta', label: 'Semantics Δ', color: theme.palette.warning.main }] : []),
-                                    ...(deltaDataset.some(d => d.resultsDelta !== 0) ? [{ dataKey: 'resultsDelta', label: 'Results Δ', color: theme.palette.info.main }] : []),
+                                <BarChart height={260} margin={{ top: 8, right: 12, bottom: 36, left: 56 }} dataset={deltaDataset} xAxis={[{ dataKey: 'attempt', label: ru.charts.attempt }]} yAxis={[{ label: ru.charts.deltaAxis }]} series={[
+                                    { dataKey: 'gradeDelta', label: ru.charts.gradeDelta, color: theme.palette.primary.main },
+                                    ...(deltaDataset.some(d => d.syntaxDelta !== 0) ? [{ dataKey: 'syntaxDelta', label: ru.charts.syntaxDelta, color: theme.palette.success.main }] : []),
+                                    ...(deltaDataset.some(d => d.semanticsDelta !== 0) ? [{ dataKey: 'semanticsDelta', label: ru.charts.semanticsDelta, color: theme.palette.warning.main }] : []),
+                                    ...(deltaDataset.some(d => d.resultsDelta !== 0) ? [{ dataKey: 'resultsDelta', label: ru.charts.resultsDelta, color: theme.palette.info.main }] : []),
                                 ]} />
-                            ) : <Typography variant='caption' color='text.secondary'>Need at least 2 attempts.</Typography>}
+                            ) : <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.needTwo}</Typography>}
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader title={<Typography variant='subtitle1'>Time Gap vs Improvement</Typography>} subheader={<Typography variant='caption'>Minutes between attempts</Typography>} />
+                        <CardHeader title={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{ru.charts.timeGap}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.timeGapHelp}</Typography>} />
                         <CardContent>
                             {timeGapDataset.length ? (
-                                <ScatterChart height={260} margin={{ top: 7, right: 7, bottom: 2, left: 0 }} series={[{ data: timeGapDataset.map(p => ({ x: p.gapMinutes, y: p.improvement })) }]} xAxis={[{ label: 'Gap (min)' }]} yAxis={[{ label: 'Grade Δ' }]} />
-                            ) : <Typography variant='caption' color='text.secondary'>Timestamp data unavailable.</Typography>}
+                                <ScatterChart height={260} margin={{ top: 8, right: 12, bottom: 36, left: 56 }} series={[{ data: timeGapDataset.map(p => ({ x: p.gapMinutes, y: p.improvement })) }]} xAxis={[{ label: ru.charts.gap }]} yAxis={[{ label: ru.charts.gradeDelta }]} />
+                            ) : <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.noTimestamps}</Typography>}
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader title={<Typography variant='subtitle1'>Attempts Used per Student</Typography>} subheader={<Typography variant='caption'>How many students reached each attempt index</Typography>} />
+                        <CardHeader title={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{ru.charts.usedPerStudent}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.usedHelp}</Typography>} />
                         <CardContent>
                             {attemptsVsStudents && attemptsVsStudents.dataset.length ? (
                                 <BarChart
                                     height={260}
-                                    margin={{ top: 7, right: 7, bottom: 2, left: 0 }}
+                                    margin={{ top: 8, right: 12, bottom: 36, left: 56 }}
                                     dataset={attemptsVsStudents.dataset}
                                     xAxis={[{
-                                        dataKey: 'attemptIndex', label: 'Attempt #', colorMap: {
+                                        dataKey: 'attemptIndex', label: ru.charts.attemptNum, colorMap: {
                                             type: 'ordinal', colors: [
                                                 theme.palette.primary.light,
                                                 theme.palette.secondary.light,
@@ -375,23 +376,23 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                                             ], values: attemptsVsStudents.dataset.map(d => d.attemptIndex)
                                         }
                                     }]}
-                                    yAxis={[{ label: 'Students' }]}
-                                    series={[{ dataKey: 'students', label: 'Students' }]}
+                                    yAxis={[{ label: ru.charts.students }]}
+                                    series={[{ dataKey: 'students', label: ru.charts.students }]}
                                     hideLegend
                                 />
-                            ) : <Typography variant='caption' color='text.secondary'>Need attempt data to compute distribution.</Typography>}
+                            ) : <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.needAttempts}</Typography>}
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader title={<Typography variant='subtitle1'>Cumulative Mastery</Typography>} subheader={<Typography variant='caption'>Best grade so far</Typography>} />
+                        <CardHeader title={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{ru.charts.mastery}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.masteryHelp}</Typography>} />
                         <CardContent>
                             {cumulDataset.length ? (
-                                <LineChart height={260} margin={{ top: 7, right: 7, bottom: 2, left: 0 }} dataset={cumulDataset} xAxis={[{ dataKey: 'attempt', label: 'Attempt' }]} yAxis={[{ label: 'Best Grade So Far' }]} series={[{ dataKey: 'bestSoFar', label: 'Best so far', color: theme.palette.primary.main }]} />
-                            ) : <Typography variant='caption' color='text.secondary'>No attempts.</Typography>}
+                                <LineChart height={260} margin={{ top: 8, right: 12, bottom: 36, left: 56 }} dataset={cumulDataset} xAxis={[{ dataKey: 'attempt', label: ru.charts.attempt }]} yAxis={[{ label: ru.charts.bestSoFar }]} series={[{ dataKey: 'bestSoFar', label: ru.charts.bestSoFar, color: theme.palette.primary.main }]} />
+                            ) : <Typography variant='caption' color='text.secondary'>{ru.charts.noAttemptsShort}</Typography>}
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader title={<Typography variant='subtitle1'>Question Difficulty</Typography>} subheader={<Typography variant='caption'>Avg attempts vs best grade</Typography>} />
+                        <CardHeader title={<Typography variant='subtitle1' sx={{ whiteSpace: 'normal' }}>{ru.charts.difficulty}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.difficultyHelp}</Typography>} />
                         <CardContent>
                             {Array.isArray(baseResults) && baseResults.length ? (() => {
                                 const qMetrics = baseResults.map((q: any) => {
@@ -401,8 +402,8 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                                     return { attemptsCount: attempts.length, best: best?.grade ?? 0 };
                                 });
                                 const scatter = qMetrics.map(m => ({ x: m.attemptsCount, y: m.best }));
-                                return <ScatterChart height={260} margin={{ top: 7, right: 7, bottom: 2, left: 0 }} series={[{ data: scatter.map(p => ({ x: p.x, y: p.y })) }]} xAxis={[{ label: 'Attempts' }]} yAxis={[{ label: 'Best Grade' }]} />;
-                            })() : <Typography variant='caption' color='text.secondary'>Need attempt data.</Typography>}
+                                return <ScatterChart height={260} margin={{ top: 8, right: 12, bottom: 36, left: 56 }} series={[{ data: scatter.map(p => ({ x: p.x, y: p.y })) }]} xAxis={[{ label: ru.common.attempts }]} yAxis={[{ label: ru.charts.bestGrade }]} />;
+                            })() : <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.needAttempts}</Typography>}
                         </CardContent>
                     </Card>
                 </Box>
@@ -419,8 +420,8 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <PeopleIcon color="primary" />
                         <Box>
-                            <Typography variant="h5">{totalAnswers}</Typography>
-                            <Typography color="text.secondary">Total Answers</Typography>
+                            <Typography variant="h5">{formatNumber(totalAnswers)}</Typography>
+                            <Typography color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.charts.totalAnswers}</Typography>
                         </Box>
                     </CardContent>
                 </Card>
@@ -428,8 +429,8 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <AssignmentIcon color="secondary" />
                         <Box>
-                            <Typography variant="h5">{uniqueAnswers}</Typography>
-                            <Typography color="text.secondary">Unique Answers</Typography>
+                            <Typography variant="h5">{formatNumber(uniqueAnswers)}</Typography>
+                            <Typography color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.charts.uniqueAnswers}</Typography>
                         </Box>
                     </CardContent>
                 </Card>
@@ -437,8 +438,8 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <GradeIcon color="success" />
                         <Box>
-                            <Typography variant="h5">{avgGrade.toFixed(2)}</Typography>
-                            <Typography color="text.secondary">Average Grade (0–1)</Typography>
+                            <Typography variant="h5">{formatNumber(avgGrade, 2)}</Typography>
+                            <Typography color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.charts.avgGrade01}</Typography>
                         </Box>
                     </CardContent>
                 </Card>
@@ -450,8 +451,8 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <ArrowUpwardIcon color="info" />
                         <Box>
-                            <Typography variant="h5">{maxGrade.toFixed(2)}</Typography>
-                            <Typography color="text.secondary">Highest Grade</Typography>
+                            <Typography variant="h5">{formatNumber(maxGrade, 2)}</Typography>
+                            <Typography color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.charts.highest}</Typography>
                         </Box>
                     </CardContent>
                 </Card>
@@ -459,8 +460,8 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <ArrowDownwardIcon color="error" />
                         <Box>
-                            <Typography variant="h5">{minGrade.toFixed(2)}</Typography>
-                            <Typography color="text.secondary">Lowest Grade</Typography>
+                            <Typography variant="h5">{formatNumber(minGrade, 2)}</Typography>
+                            <Typography color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.charts.lowest}</Typography>
                         </Box>
                     </CardContent>
                 </Card>
@@ -469,7 +470,7 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
             {/* Visualizations */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                 <Card>
-                    <CardHeader title={<Typography variant="subtitle1">Grade Distribution (0–1)</Typography>} subheader={<Typography variant='caption' color='text.secondary'>N = {totalAnswers}</Typography>} />
+                    <CardHeader title={<Typography variant="subtitle1" sx={{ whiteSpace: 'normal' }}>{ru.charts.distribution}</Typography>} subheader={<Typography variant='caption' color='text.secondary'>N = {formatNumber(totalAnswers)}</Typography>} />
                     <CardContent>
                         <BarChart
                             margin={{ top: 4, right: 8, bottom: 26, left: 34 }}
@@ -477,7 +478,7 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                             dataset={distDataset}
                             xAxis={[{
                                 dataKey: 'bin',
-                                label: 'Grade (0–1)',
+                                label: ru.charts.grade01,
                                 categoryGapRatio: 0.15,
                                 barGapRatio: 0.0,
                                 colorMap: { type: 'ordinal', colors: COLORS, values: distDataset.map((d) => d.bin) },
@@ -490,7 +491,7 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader title={<Typography variant="subtitle1">Pass/Fail Rate</Typography>} subheader={<Typography variant='caption' color='text.secondary'>N = {normalizedGrades.length}</Typography>} />
+                    <CardHeader title={<Typography variant="subtitle1" sx={{ whiteSpace: 'normal' }}>{ru.charts.passFail}</Typography>} subheader={<Typography variant='caption' color='text.secondary'>N = {formatNumber(normalizedGrades.length)}</Typography>} />
                     <CardContent>
                         <PieChart series={[{ data: passFailData }]} height={260} />
                     </CardContent>
@@ -499,9 +500,9 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
 
             {user?.role === 'instructor' && (
                 <Box>
-                    <Tooltip title='Explore detailed progress & rubric evolution'>
+                    <Tooltip title={ru.charts.moreCharts}>
                         <span>
-                            <Button variant='outlined' onClick={() => toggleAdvanced(true)}>More Charts</Button>
+                            <Button variant='outlined' onClick={() => toggleAdvanced(true)} sx={{ whiteSpace: 'normal' }}>{ru.charts.more}</Button>
                         </span>
                     </Tooltip>
                 </Box>
@@ -509,27 +510,27 @@ export default function ResultsCharts({ results = [] as any[], loadAttemptsForCo
 
             {/* Common Incorrect Answers */}
             <Card>
-                <CardHeader title="Common Incorrect Answers" />
+                <CardHeader title={<Typography variant="subtitle1" sx={{ whiteSpace: 'normal' }}>{ru.charts.commonWrong}</Typography>} />
                 <CardContent>
                     {commonIncorrect.length ? (
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600 }}>Count</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Answer</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{ru.charts.count}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{ru.charts.answer}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {commonIncorrect.map((item, idx) => (
                                     <TableRow key={idx}>
-                                        <TableCell>{item.count}</TableCell>
+                                        <TableCell>{formatNumber(item.count)}</TableCell>
                                         <TableCell sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.answer}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
                     ) : (
-                        <Typography color="text.secondary">No common incorrect answers available.</Typography>
+                        <Typography color="text.secondary" sx={{ whiteSpace: 'normal' }}>{ru.charts.noCommon}</Typography>
                     )}
                 </CardContent>
             </Card>
@@ -559,20 +560,20 @@ function InstructorSurveyAnalytics({ assignmentId }: InstructorSurveyAnalyticsPr
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 const url = showAll ? '/api/feedback?aggregate=1' : (assignmentId ? `/api/feedback?aggregate=1&assignmentId=${encodeURIComponent(assignmentId)}` : '/api/feedback?aggregate=1');
                 const res = await fetch(url, { headers });
-                if (res.status === 401) { setError('Unauthorized'); return; }
+                if (res.status === 401) { setError(uiError('Unauthorized', ru.errors.generic)); return; }
                 if (!res.ok) throw new Error('fetch failed');
                 const json = await res.json();
                 if (!cancelled) setData(json);
             } catch (e: any) {
-                if (!cancelled) setError(e.message || 'error');
+                if (!cancelled) setError(uiError(e, ru.errors.generic));
             } finally { if (!cancelled) setLoading(false); }
         }
         load();
         return () => { cancelled = true; };
     }, [token, assignmentId, showAll]);
-    if (loading) return <Typography variant='caption' color='text.secondary'>Loading survey analytics…</Typography>;
-    if (error) return <Typography variant='caption' color='error'>Survey analytics unavailable: {error}</Typography>;
-    if (!data || !data.total_responses) return <Typography variant='caption' color='text.secondary'>No survey responses yet.</Typography>;
+    if (loading) return <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.loadingSurvey}</Typography>;
+    if (error) return <Typography variant='caption' color='error' sx={{ whiteSpace: 'normal' }}>{ru.charts.surveyUnavailable(error)}</Typography>;
+    if (!data || !data.total_responses) return <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.noSurvey}</Typography>;
     // Prepare distributions for charts
     const helpedRaw = (data.helped_fix_distribution || []).map((d: any) => ({ rating: d.helped_fix as number, n: d.n as number }));
     const understandingRaw = (data.improved_understanding_distribution || []).map((d: any) => ({ rating: d.improved_understanding as number, n: d.n as number }));
@@ -580,7 +581,7 @@ function InstructorSurveyAnalytics({ assignmentId }: InstructorSurveyAnalyticsPr
     const surveyColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728'];
     // Convert into single-row dataset with columns value1..value5 so each bar becomes its own series (allowing distinct colors)
     function toSeriesDataset(rows: { rating: number; n: number }[]) {
-        const base: any = { bucket: 'ratings' };
+        const base: any = { bucket: ru.charts.ratings };
         rows.forEach(r => { base['v' + r.rating] = r.n; });
         return [base];
     }
@@ -592,53 +593,53 @@ function InstructorSurveyAnalytics({ assignmentId }: InstructorSurveyAnalyticsPr
     const rawResponses: any[] = Array.isArray(data.responses) ? data.responses : [];
     const fmt2 = (v: any) => {
         const n = Number(v);
-        return isFinite(n) ? n.toFixed(2) : '–';
+        return isFinite(n) ? formatNumber(n, 2) : '–';
     };
     return (
         <Box sx={{ display: 'grid', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant='h6'>Survey Analytics</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+                <Typography variant='h6' sx={{ whiteSpace: 'normal' }}>{ru.charts.survey}</Typography>
                 <FormControlLabel
                     control={<Switch size='small' checked={showAll} onChange={(_, v) => setShowAll(v)} />}
-                    label={<Typography variant='caption' color='text.secondary'>{showAll ? 'All assignments' : 'Current assignment'}</Typography>}
+                    label={<Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{showAll ? ru.charts.allAssignments : ru.charts.currentAssignment}</Typography>}
                 />
             </Box>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)', md: 'repeat(6, 1fr)' } }}>
-                <Card><CardContent><Typography variant='h6'>{data.total_responses}</Typography><Typography variant='caption' color='text.secondary'>Responses</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant='h6'>{data.avg_helped_fix ?? '–'}</Typography><Typography variant='caption' color='text.secondary'>Avg Helped Fix</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant='h6'>{data.avg_improved_understanding ?? '–'}</Typography><Typography variant='caption' color='text.secondary'>Avg Understanding</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant='h6'>{data.avg_improvement != null ? fmt2(data.avg_improvement) : '–'}</Typography><Typography variant='caption' color='text.secondary'>Avg Improvement</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant='h6'>{data.percent_improved != null ? data.percent_improved + '%' : '–'}</Typography><Typography variant='caption' color='text.secondary'>% Improved</Typography></CardContent></Card>
-                <Card><CardContent><Typography variant='h6'>{data.median_improvement != null ? fmt2(data.median_improvement) : '–'}</Typography><Typography variant='caption' color='text.secondary'>Median Δ</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant='h6'>{formatNumber(Number(data.total_responses))}</Typography><Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal', display: 'block' }}>{ru.charts.responses}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant='h6'>{data.avg_helped_fix != null ? fmt2(data.avg_helped_fix) : '–'}</Typography><Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal', display: 'block' }}>{ru.charts.avgHelped}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant='h6'>{data.avg_improved_understanding != null ? fmt2(data.avg_improved_understanding) : '–'}</Typography><Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal', display: 'block' }}>{ru.charts.avgUnderstanding}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant='h6'>{data.avg_improvement != null ? fmt2(data.avg_improvement) : '–'}</Typography><Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal', display: 'block' }}>{ru.charts.avgImprovement}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant='h6'>{data.percent_improved != null ? formatPercent(Number(data.percent_improved) / 100, 1) : '–'}</Typography><Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal', display: 'block' }}>{ru.charts.pctImproved}</Typography></CardContent></Card>
+                <Card><CardContent><Typography variant='h6'>{data.median_improvement != null ? fmt2(data.median_improvement) : '–'}</Typography><Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal', display: 'block' }}>{ru.charts.medianDelta}</Typography></CardContent></Card>
             </Box>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
                 <Card>
-                    <CardHeader title={<Typography variant='subtitle2'>Helped Fix Distribution</Typography>} />
+                    <CardHeader title={<Typography variant='subtitle2' sx={{ whiteSpace: 'normal' }}>{ru.charts.helpedDist}</Typography>} />
                     <CardContent>
-                        {helpedDataset[0] && helpedSeries.length ? <BarChart height={200} dataset={helpedDataset} xAxis={[{ dataKey: 'bucket', scaleType: 'band', label: 'Helped Fix (1-5)', categoryGapRatio: 0.4 }]} series={helpedSeries} /> : <Typography variant='caption' color='text.secondary'>No data</Typography>}
+                        {helpedDataset[0] && helpedSeries.length ? <BarChart height={200} dataset={helpedDataset} xAxis={[{ dataKey: 'bucket', scaleType: 'band', label: ru.charts.helpedAxis, categoryGapRatio: 0.4 }]} series={helpedSeries} /> : <Typography variant='caption' color='text.secondary'>{ru.charts.noData}</Typography>}
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader title={<Typography variant='subtitle2'>Understanding Distribution</Typography>} />
+                    <CardHeader title={<Typography variant='subtitle2' sx={{ whiteSpace: 'normal' }}>{ru.charts.understandingDist}</Typography>} />
                     <CardContent>
-                        {understandingDataset[0] && understandingSeries.length ? <BarChart height={200} dataset={understandingDataset} xAxis={[{ dataKey: 'bucket', scaleType: 'band', label: 'Understanding (1-5)', categoryGapRatio: 0.4 }]} series={understandingSeries} /> : <Typography variant='caption' color='text.secondary'>No data</Typography>}
+                        {understandingDataset[0] && understandingSeries.length ? <BarChart height={200} dataset={understandingDataset} xAxis={[{ dataKey: 'bucket', scaleType: 'band', label: ru.charts.understandingAxis, categoryGapRatio: 0.4 }]} series={understandingSeries} /> : <Typography variant='caption' color='text.secondary'>{ru.charts.noData}</Typography>}
                     </CardContent>
                 </Card>
             </Box>
             <Card>
-                <CardHeader title={<Typography variant='subtitle2'>Correlations</Typography>} subheader={<Typography variant='caption'>Improvement vs Ratings (Pearson)</Typography>} />
+                <CardHeader title={<Typography variant='subtitle2' sx={{ whiteSpace: 'normal' }}>{ru.charts.correlations}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.correlationsHelp}</Typography>} />
                 <CardContent>
                     <Table size='small'>
-                        <TableHead><TableRow><TableCell>Metric</TableCell><TableCell>r</TableCell></TableRow></TableHead>
+                        <TableHead><TableRow><TableCell sx={{ whiteSpace: 'normal' }}>{ru.charts.metric}</TableCell><TableCell>r</TableCell></TableRow></TableHead>
                         <TableBody>
-                            <TableRow><TableCell>Improvement ~ Helped Fix</TableCell><TableCell>{data.correlation?.improvement_helped_fix ?? 'n/a'}</TableCell></TableRow>
-                            <TableRow><TableCell>Improvement ~ Understanding</TableCell><TableCell>{data.correlation?.improvement_understanding ?? 'n/a'}</TableCell></TableRow>
+                            <TableRow><TableCell sx={{ whiteSpace: 'normal' }}>{ru.charts.corrHelped}</TableCell><TableCell>{data.correlation?.improvement_helped_fix != null && isFinite(Number(data.correlation.improvement_helped_fix)) ? formatNumber(Number(data.correlation.improvement_helped_fix), 2) : ru.common.na}</TableCell></TableRow>
+                            <TableRow><TableCell sx={{ whiteSpace: 'normal' }}>{ru.charts.corrUnderstanding}</TableCell><TableCell>{data.correlation?.improvement_understanding != null && isFinite(Number(data.correlation.improvement_understanding)) ? formatNumber(Number(data.correlation.improvement_understanding), 2) : ru.common.na}</TableCell></TableRow>
                         </TableBody>
                     </Table>
                 </CardContent>
             </Card>
             <Card>
-                <CardHeader title={<Typography variant='subtitle2'>Raw Feedback Responses</Typography>} subheader={<Typography variant='caption'>Individual entries (toggle visibility)</Typography>} action={<Button size='small' onClick={() => setShowRaw(r => !r)}>{showRaw ? 'Hide' : 'Show'}</Button>} />
+                <CardHeader title={<Typography variant='subtitle2' sx={{ whiteSpace: 'normal' }}>{ru.charts.raw}</Typography>} subheader={<Typography variant='caption' sx={{ whiteSpace: 'normal' }}>{ru.charts.rawHelp}</Typography>} action={<Button size='small' onClick={() => setShowRaw(r => !r)} sx={{ whiteSpace: 'normal' }}>{showRaw ? ru.charts.hide : ru.charts.show}</Button>} />
                 <CardContent>
                     {showRaw ? (
                         rawResponses.length ? (
@@ -647,10 +648,10 @@ function InstructorSurveyAnalytics({ assignmentId }: InstructorSurveyAnalyticsPr
                                     <TableHead>
                                         <TableRow>
                                             <TableCell sx={{ fontWeight: 600 }}>#</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }}>Helped Fix</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }}>Understanding</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }}>Improvement</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }}>Comment</TableCell>
+                                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{ru.charts.helped}</TableCell>
+                                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{ru.charts.understanding}</TableCell>
+                                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{ru.charts.improvement}</TableCell>
+                                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'normal' }}>{ru.charts.comment}</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -659,15 +660,15 @@ function InstructorSurveyAnalytics({ assignmentId }: InstructorSurveyAnalyticsPr
                                                 <TableCell>{idx + 1}</TableCell>
                                                 <TableCell>{r.helped_fix ?? '–'}</TableCell>
                                                 <TableCell>{r.improved_understanding ?? '–'}</TableCell>
-                                                <TableCell>{isFinite(Number(r.improvement)) ? Number(r.improvement).toFixed(2) : '–'}</TableCell>
+                                                <TableCell>{isFinite(Number(r.improvement)) ? formatNumber(Number(r.improvement), 2) : '–'}</TableCell>
                                                 <TableCell sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: 260 }}>{(r.comment ?? r.comments ?? '').trim() || <Typography component='span' variant='caption' color='text.secondary'>—</Typography>}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             </Box>
-                        ) : <Typography variant='caption' color='text.secondary'>Backend did not include raw responses.</Typography>
-                    ) : <Typography variant='caption' color='text.secondary'>Hidden (click Show to expand).</Typography>}
+                        ) : <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.noRaw}</Typography>
+                    ) : <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'normal' }}>{ru.charts.hidden}</Typography>}
                 </CardContent>
             </Card>
         </Box>

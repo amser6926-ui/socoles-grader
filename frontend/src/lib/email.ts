@@ -26,17 +26,18 @@ function getTransport() {
 export async function sendInviteEmail({ to, name, link, className, fromOverride }: InviteEmailPayload): Promise<{ sent: boolean; id?: string; error?: string }> {
     const from = fromOverride || process.env.SMTP_FROM || 'no-reply@socoles.local';
     const transporter = getTransport();
-    const subject = `You're invited to join "${className}" on SOCOLES`;
+    const subject = `Приглашение в курс «${className}» на SOCOLES`;
+    const greeting = name ? `Здравствуйте, ${name}!` : 'Здравствуйте!';
     const html = `
-        <div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; line-height:1.5;">
-            <h2>You're invited${name ? ', ' + name : ''}!</h2>
-            <p>Your instructor has invited you to join their class <b>${className}</b> on SOCOLES.</p>
-            <p><a href="${link}" style="display:inline-block;background:#1976d2;color:#fff;text-decoration:none;padding:10px 16px;border-radius:6px">Accept Invite</a></p>
-            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <div lang="ru" style="font-family:system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans', Helvetica, Arial, sans-serif; line-height:1.5;">
+            <h2>${greeting}</h2>
+            <p>Преподаватель приглашает вас в курс <b>${className}</b> на SOCOLES.</p>
+            <p><a href="${link}" style="display:inline-block;background:#1976d2;color:#fff;text-decoration:none;padding:10px 16px;border-radius:6px">Принять приглашение</a></p>
+            <p>Если кнопка не открывается, скопируйте ссылку в браузер:</p>
             <p><a href="${link}">${link}</a></p>
         </div>
     `;
-    const text = `You're invited${name ? ', ' + name : ''}!\n\nYour instructor has invited you to join the class "${className}" on SOCOLES.\n\nOpen this link to accept: ${link}`;
+    const text = `${greeting}\n\nПреподаватель приглашает вас в курс «${className}» на SOCOLES.\n\nОткройте ссылку, чтобы принять приглашение: ${link}`;
 
     if (!transporter) {
         console.log('[email] SMTP not configured; would send invite:', { to, subject, link });

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { Box, Stack, Typography, Tooltip, IconButton } from '@mui/material';
 import UploadIcon from '@mui/icons-material/Upload';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { m, uiError, formatNumber } from '@/i18n';
 
 
 export default function FileDrop({ label, accept, onFile, help }: { label: string; accept: string; onFile: (f: File) => Promise<void> | void; help?: string; }) {
@@ -31,15 +32,15 @@ export default function FileDrop({ label, accept, onFile, help }: { label: strin
     async function handleChosen(file: File | undefined | null) {
         if (!file) return;
         if (!matchesAccept(file, accept)) {
-            setError(`Invalid file type. Expected ${accept}`);
+            setError(m.files.invalid(accept));
             return;
         }
-        setName(`${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+        setName(`${file.name} (${formatNumber(file.size / 1024, 1)} ${m.files.kb})`);
         setError('');
         try {
             await onFile(file);
         } catch (err: any) {
-            setError(String(err?.message || err));
+            setError(uiError(err, m.errors.generic));
         }
     }
 
@@ -59,7 +60,7 @@ export default function FileDrop({ label, accept, onFile, help }: { label: strin
                 <Typography fontWeight={600}>{label}</Typography>
                 {!!help && (
                     <Tooltip title={help} arrow>
-                        <IconButton size="small" aria-label="Help for file input">
+                        <IconButton size="small" aria-label={m.files.help}>
                             <InfoOutlinedIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
@@ -68,7 +69,7 @@ export default function FileDrop({ label, accept, onFile, help }: { label: strin
             <Box
                 role="button"
                 tabIndex={0}
-                aria-label={`${label} file input`}
+                aria-label={m.files.input(label)}
                 onClick={() => inputRef.current?.click()}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
                 sx={{
@@ -84,7 +85,7 @@ export default function FileDrop({ label, accept, onFile, help }: { label: strin
                     gap: 1,
                 }}
             >
-                <span>{name || `Drop & drop or click to browse (${accept})`}</span>
+                <span>{name || m.files.drop(accept)}</span>
                 <UploadIcon color={dragActive ? 'primary' : 'inherit'} />
                 <input
                     ref={inputRef}

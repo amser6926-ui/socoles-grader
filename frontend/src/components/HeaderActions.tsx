@@ -22,7 +22,7 @@ export interface HeaderActionsProps {
 }
 
 /** Renders a consistent row of header action buttons based on config array. */
-const HeaderActions: React.FC<HeaderActionsProps> = ({ actions, gap = 0.75, wrap = false }) => {
+const HeaderActions: React.FC<HeaderActionsProps> = ({ actions, gap = 0.75, wrap = true }) => {
     const visible = actions.filter(a => !a.hidden);
     if (!visible.length) return null;
     return (

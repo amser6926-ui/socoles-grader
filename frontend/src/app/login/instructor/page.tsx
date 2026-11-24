@@ -9,6 +9,7 @@ import Logo from '@/components/Logo';
 import KeyIcon from '@mui/icons-material/VpnKey';
 import { signIn, signOut } from 'next-auth/react';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m, uiError } from '@/i18n';
 
 function InstructorLoginPageInner() {
     const router = useRouter();
@@ -90,7 +91,7 @@ function InstructorLoginPageInner() {
                         }}>
                             <Box sx={{ display: 'grid', placeItems: 'center' }}>
                                 <Logo height={48} variant="default" />
-                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>Instructor</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{m.auth.instructor}</Typography>
                             </Box>
                         </Box>
                     }
@@ -117,13 +118,13 @@ function InstructorLoginPageInner() {
                                             setError(null);
                                             return;
                                         }
-                                        if (!ex.ok) throw new Error('Failed to establish session. Please refresh.');
+                                        if (!ex.ok) throw new Error(uiError('Failed to establish session. Please refresh.', m.errors.generic));
                                         const { token, instructor } = await ex.json();
-                                        if (!token || !instructor?.id) throw new Error('Invalid session exchange result');
+                                        if (!token || !instructor?.id) throw new Error(uiError('Invalid session exchange result', m.errors.generic));
                                         try { localStorage.setItem('sqlgrader.instructor', JSON.stringify({ token, email: instructor.email, id: instructor.id, name: instructor.name })); } catch { }
                                         setUser({ name: instructor.email, role: 'instructor', token, instructorId: instructor.id });
                                     } catch (e: any) {
-                                        setError(e.message || 'Sign in failed');
+                                        setError(uiError(e, m.errors.generic));
                                     } finally {
                                         setLoading(false);
                                     }
@@ -133,16 +134,16 @@ function InstructorLoginPageInner() {
                                     '&:hover': { background: (t) => `${t.palette.secondary.main}12` },
                                 }}
                             >
-                                Sign in with Keycloak
+                                {m.auth.signInKeycloak}
                             </Button>
 
                             {ssoReady && (
                                 <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Typography variant="caption" color="text.secondary">
-                                        {ssoEmail ? `Signed in with Keycloak as ${ssoEmail}` : 'Keycloak session detected'}
+                                        {ssoEmail ? m.auth.signedInAs(ssoEmail) : m.auth.sessionDetected}
                                     </Typography>
                                     <Button size="small" variant="text" onClick={() => { window.location.href = '/api/auth/idp-logout?redirect=/'; }}>
-                                        Sign out
+                                        {m.auth.signOut}
                                     </Button>
                                 </Box>
                             )}
@@ -152,32 +153,32 @@ function InstructorLoginPageInner() {
                     ) : (
                         <>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Your instructor account is not yet set up. Enter your one-time signup code:
+                                {m.auth.provisionHelp}
                             </Typography>
 
                             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 1 }}>
-                                <TextField size="small" label="Signup code" value={signupCode} onChange={(e) => setSignupCode(e.target.value)} />
+                                <TextField size="small" label={m.auth.signupCode} value={signupCode} onChange={(e) => setSignupCode(e.target.value)} />
                                 <Button
                                     variant="contained"
                                     onClick={async () => {
                                         setError(null);
-                                        if (!signupCode) { setError('Signup code required'); return; }
+                                        if (!signupCode) { setError(uiError('Signup code required', m.errors.generic)); return; }
                                         setLoading(true);
                                         try {
                                             const res = await fetch('/api/instructor/provision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ signupCode }) });
                                             const data = await res.json();
-                                            if (res.status === 401) throw new Error('Please sign in with Keycloak first');
-                                            if (!res.ok) throw new Error(data?.error || 'Provisioning failed');
+                                            if (res.status === 401) throw new Error(uiError('Please sign in with Keycloak first', m.errors.generic));
+                                            if (!res.ok) throw new Error(uiError(data?.error, m.errors.generic));
                                             const ex = await fetch('/api/auth/exchange', { method: 'POST' });
-                                            if (!ex.ok) throw new Error('Provisioned, but failed to establish session. Please refresh.');
+                                            if (!ex.ok) throw new Error(uiError('Provisioned, but failed to establish session. Please refresh.', m.errors.generic));
                                             const { token, instructor } = await ex.json();
-                                            if (!token || !instructor?.id) throw new Error('Provisioned, but invalid session exchange result');
+                                            if (!token || !instructor?.id) throw new Error(uiError('Provisioned, but invalid session exchange result', m.errors.generic));
                                             try { localStorage.setItem('sqlgrader.instructor', JSON.stringify({ token, email: instructor.email, id: instructor.id, name: instructor.name })); } catch { }
                                             setUser({ name: instructor.email, role: 'instructor', token, instructorId: instructor.id });
                                             setShowProvision(false);
                                             router.replace('/');
                                         } catch (e: any) {
-                                            setError(e.message || 'Provisioning failed');
+                                            setError(uiError(e, m.errors.generic));
                                         } finally {
                                             setLoading(false);
                                         }
@@ -187,7 +188,7 @@ function InstructorLoginPageInner() {
                                         '&:hover': { background: (t) => t.palette.primary.dark },
                                     }}
                                 >
-                                    Submit
+                                    {m.auth.submitCode}
                                 </Button>
                             </Box>
 
@@ -199,7 +200,7 @@ function InstructorLoginPageInner() {
 
             <Box sx={{ mt: 1.5, textAlign: 'center' }}>
                 <MuiLink component={NextLink} href="/" color="text.secondary" underline="hover" sx={{ fontSize: '0.875rem' }}>
-                    ← Back to role picker
+                    {m.auth.backToRoles}
                 </MuiLink>
             </Box>
         </Box>

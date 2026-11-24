@@ -16,6 +16,7 @@ import DoneIcon from '@mui/icons-material/Done';
 import type { AssignmentWithQuestions, Rubric, QuestionSubmissionAttempt, QuestionSubmissionDraft } from '@/lib/types';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { DEFAULT_GRADING_OPTIONS } from '@/lib/api';
+import { displayFeedback, formatNumber, m as ru, uiError } from '@/i18n';
 
 interface PlayerProps {
     assignmentId: string | null;
@@ -332,7 +333,7 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
         setHistoryMap(m => ({ ...m, [questionId]: { ...(m[questionId] || { attempts: [] }), loading: true, error: undefined } }));
         try {
             const res = await authFetch(`/api/question-submissions?historyOf=${qsId}`);
-            if (!res.ok) throw new Error('Failed to load attempt history');
+            if (!res.ok) throw new Error(uiError('Failed to load attempt history', ru.errors.history));
             const attempts = await res.json();
             setHistoryMap(m => ({ ...m, [questionId]: { loading: false, attempts } }));
             if (Array.isArray(attempts) && attempts.length) {
@@ -341,7 +342,7 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
                 setAttemptTab(0);
             }
         } catch (e: any) {
-            setHistoryMap(m => ({ ...m, [questionId]: { loading: false, attempts: [], error: e?.message || 'Failed' } }));
+            setHistoryMap(m => ({ ...m, [questionId]: { loading: false, attempts: [], error: uiError(e, ru.errors.history) } }));
             setAttemptTab(0);
         }
     }
@@ -598,17 +599,17 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
         const tq = assignment?.questions?.length || 0;
         if (activeIdx !== (tq - 1)) return;
         setSubmitting(true);
-        setSubmitMsg('Submitting…');
+        setSubmitMsg(ru.common.submitting);
         try {
             // Save current question
             await saveDraftFor(currentQuestion);
-            setSubmitMsg('Submitting… starting auto-grader');
+            setSubmitMsg(ru.player.submittingStart);
             // Start async grading job
             const start = await authFetch('/api/grade-submission', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ submissionId: submission.id, async: true }) });
-            if (!start.ok) throw new Error('Failed to start grading');
+            if (!start.ok) throw new Error(uiError('Failed to start grading', ru.errors.startGrading));
             const started = await start.json();
             const jobId: string | undefined = started?.jobId;
-            if (!jobId) throw new Error('No job id');
+            if (!jobId) throw new Error(uiError('No job id', ru.errors.noJob));
             // Poll job until done (120s cap)
             const deadline = Date.now() + 120_000;
             let final: any = null;
@@ -618,12 +619,12 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
                 if (!poll.ok) continue;
                 const body = await poll.json();
                 if (body.status === 'succeeded') { final = body.result; break; }
-                if (body.status === 'failed') { throw new Error(body.error || 'Grading failed'); }
+                if (body.status === 'failed') { throw new Error(uiError(body.error, ru.errors.gradingFailed)); }
                 // else queued/running -> continue
-                setSubmitMsg('Grading in progress…');
+                setSubmitMsg(ru.player.gradingProgress);
             }
             if (!final) {
-                setSubmitMsg('Still processing in background. You will see the results shortly.');
+                setSubmitMsg(ru.player.stillProcessing);
                 // Do not lock immediately to allow UI to refresh later, but we can mark as submitted
                 setSubmitted(true);
                 setIsLocked(true);
@@ -632,12 +633,12 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
             // Update submission state & lock
             setSubmitted(true);
             setIsLocked(true);
-            setSubmitMsg(final.status === 'Needs review' ? 'Completed with issues. Marked Needs review.' : 'Auto-grading complete.');
+            setSubmitMsg(final.status === 'Needs review' ? ru.player.completedIssues : ru.player.autoComplete);
             if (onSubmitted) onSubmitted({ ...submission, grade: final?.submission?.grade ?? 0, status: final?.status || 'Auto-graded' });
             // Optionally close after a short delay
             setTimeout(() => { onClose(); }, 1000);
         } catch (e: any) {
-            setSubmitMsg(e?.message || 'Failed to submit');
+            setSubmitMsg(uiError(e, ru.errors.submit));
         } finally { setSubmitting(false); }
     }
 
@@ -653,8 +654,8 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
     }
 
     if (!assignmentId) return null;
-    if (loading) return <Card sx={{ p: 3 }}><Typography>Loading assignment…</Typography></Card>;
-    if (!assignment) return <Card sx={{ p: 3 }}><Typography>Assignment not found.</Typography><Button sx={{ mt: 1 }} onClick={onClose}>Close</Button></Card>;
+    if (loading) return <Card sx={{ p: 3 }}><Typography>{ru.player.loadingAssignment}</Typography></Card>;
+    if (!assignment) return <Card sx={{ p: 3 }}><Typography>{ru.player.notFound}</Typography><Button sx={{ mt: 1 }} onClick={onClose}>{ru.common.close}</Button></Card>;
 
     // Determine denominator for display purposes
     const gradeDenom = typeof grade === 'number' ? (grade <= 1 ? 1 : 10) : null;
@@ -663,13 +664,13 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
         <Card sx={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
             {previewMode && (
                 <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
-                    <Chip size='small' color='warning' label='Preview Mode' />
+                    <Chip size='small' color='warning' label={ru.player.previewMode} />
                 </Box>
             )}
             <CardHeader
                 title={<Typography variant='subtitle1'>{assignment.title}</Typography>}
-                subheader={<Typography variant='caption' color='text.secondary'>Question {activeIdx + 1} of {assignment.questions.length}{previewMode && ' • Preview'}</Typography>}
-                action={!previewMode ? <Button size='small' onClick={handleClose}>Close</Button> : undefined}
+                subheader={<Typography variant='caption' color='text.secondary'>{ru.player.questionOf(activeIdx + 1, assignment.questions.length)}{previewMode && ru.player.previewSuffix}</Typography>}
+                action={!previewMode ? <Button size='small' onClick={handleClose}>{ru.common.close}</Button> : undefined}
             />
             <CardContent sx={{ display: 'grid', gap: 2, gridTemplateColumns: { lg: '1fr 340px' } }}>
                 <Box>
@@ -678,15 +679,15 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
                         {currentQuestion?.difficulty && (
                             <DifficultyChip value={currentQuestion.difficulty} size='small' />
                         )}
-                        {currentQuestion?.pointsOverride != null ? <Chip size='small' label={`${currentQuestion.pointsOverride} pts`} color='primary' /> : <Chip size='small' label={`${currentQuestion?.maxPoints} pts`} />}
-                        <Chip size='small' label={`Attempts left: ${attemptsLeft}`} color={attemptsLeft > 0 ? 'default' : 'warning'} />
+                        {currentQuestion?.pointsOverride != null ? <Chip size='small' label={ru.common.pts(currentQuestion.pointsOverride)} color='primary' /> : <Chip size='small' label={ru.common.pts(currentQuestion?.maxPoints ?? '—')} />}
+                        <Chip size='small' label={ru.player.attemptsLeft(attemptsLeft)} color={attemptsLeft > 0 ? 'default' : 'warning'} />
                     </Box>
                     {!!questionDetail && (
                         <Box sx={{ mb: 1 }}>
-                            {qLoading && <Typography variant='caption' color='text.secondary'>Loading question…</Typography>}
+                            {qLoading && <Typography variant='caption' color='text.secondary'>{ru.player.loadingQuestion}</Typography>}
                             {!qLoading && (
                                 <PromptWithHint
-                                    prompt={String(questionDetail.prompt || 'No prompt provided.')}
+                                    prompt={String(questionDetail.prompt || ru.common.noPrompt)}
                                     hint={String(questionDetail?.hints || '')}
                                     showHint={showHint}
                                     onToggle={() => setShowHint(s => !s)}
@@ -697,51 +698,51 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
                         </Box>
                     )}
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1 }}>
-                        <Tab label='Schema' />
-                        <Tab label='Editor' />
+                        <Tab label={ru.common.schema} />
+                        <Tab label={ru.common.editor} />
                     </Tabs>
                     {tab === 0 && (
                         <Box sx={{ color: 'text.secondary', fontSize: 14 }}>
-                            <p style={{ margin: 0 }}>Schema</p>
+                            <p style={{ margin: 0 }}>{ru.common.schema}</p>
                             <SchemaPreview sql={String(questionDetail?.initSql || '')} />
                         </Box>
                     )}
                     {tab === 1 && (
-                        <SqlEditor value={sql} onChange={setSql} placeholder='-- Write your SQL here' readOnly={isLocked} minRows={10} />
+                        <SqlEditor value={sql} onChange={setSql} placeholder={ru.player.sqlPlaceholder} readOnly={isLocked} minRows={10} />
                     )}
                 </Box>
                 <Box sx={{ display: 'grid', gap: 2 }}>
                     <Card variant='outlined'>
-                        <CardHeader title={<Typography variant='subtitle2'>Auto-Grader</Typography>} />
+                        <CardHeader title={<Typography variant='subtitle2'>{ru.player.autoGrader}</Typography>} />
                         <CardContent>
                             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
-                                <Button onClick={runGrade} disabled={grading || !sql.trim() || (Number(attemptsAllowed) || 0) <= 1 || attemptsLeft <= 0} startIcon={<PlayArrowIcon />} variant='contained'>{grading ? 'Grading…' : 'Run'}</Button>
-                                {!previewMode && <Button variant='outlined' startIcon={<DoneIcon />} disabled={!isOnLastQuestion || submitted || submitting || isLocked} onClick={submitAnswer}>{submitted ? 'Submitted' : 'Submit'}</Button>}
+                                <Button onClick={runGrade} disabled={grading || !sql.trim() || (Number(attemptsAllowed) || 0) <= 1 || attemptsLeft <= 0} startIcon={<PlayArrowIcon />} variant='contained'>{grading ? ru.common.grading : ru.common.run}</Button>
+                                {!previewMode && <Button variant='outlined' startIcon={<DoneIcon />} disabled={!isOnLastQuestion || submitted || submitting || isLocked} onClick={submitAnswer}>{submitted ? ru.player.submitted : ru.common.submit}</Button>}
                             </Box>
-                            {previewMode && <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: .75 }}>Preview: grading not persisted.</Typography>}
-                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: .75 }}>Attempts allowed: {Number(attemptsAllowed) || 0}. Used: {attemptsUsed}. Left: {attemptsLeft}.</Typography>
+                            {previewMode && <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: .75 }}>{ru.player.previewNotSaved}</Typography>}
+                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: .75 }}>{ru.player.attemptsMeta(Number(attemptsAllowed) || 0, attemptsUsed, attemptsLeft)}</Typography>
                             <Box sx={{ mt: 2 }}>
-                                {isLocked && <Typography variant='caption' color='error' sx={{ display: 'block', mb: .5 }}>Submission locked (already submitted).</Typography>}
+                                {isLocked && <Typography variant='caption' color='error' sx={{ display: 'block', mb: .5 }}>{ru.player.locked}</Typography>}
                                 {!!submitMsg && <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: .5 }}>{submitMsg}</Typography>}
                                 <GradeDisplay grade={typeof grade === 'number' ? grade : null} denom={gradeDenom} />
                             </Box>
                             <Divider sx={{ my: 1.5 }} />
                             <RubricBars rubric={rubric} />
                             <Box sx={{ mt: 2 }}>
-                                <Typography variant='body2' color='text.secondary'>Feedback</Typography>
-                                <FeedbackList feedback={feedback} emptyText='No feedback yet.' />
+                                <Typography variant='body2' color='text.secondary'>{ru.common.feedback}</Typography>
+                                <FeedbackList feedback={feedback} emptyText={ru.player.noFeedbackYet} />
                             </Box>
                             <Divider sx={{ my: 1.5 }} />
                             <Box>
-                                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>Attempts</Typography>
+                                <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>{ru.common.attempts}</Typography>
                                 {attemptsLoading && (
                                     <Typography variant='caption' color='text.secondary' sx={{ display: 'inline-flex', alignItems: 'center', gap: .75 }}>
-                                        <CircularProgress size={12} /> Loading…
+                                        <CircularProgress size={12} /> {ru.common.loading}
                                     </Typography>
                                 )}
                                 {!attemptsLoading && attemptsError && <Typography variant='caption' color='error'>{attemptsError}</Typography>}
                                 {!attemptsLoading && !attemptsError && !attemptsSorted.length && (
-                                    <Typography variant='caption' color='text.secondary'>No attempts yet.</Typography>
+                                    <Typography variant='caption' color='text.secondary'>{ru.player.noAttempts}</Typography>
                                 )}
                                 {!attemptsLoading && !attemptsError && attemptsSorted.length > 0 && selectedAttempt && (
                                     <Box>
@@ -753,31 +754,31 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
                                             sx={{ mb: 1 }}
                                         >
                                             {attemptsSorted.map((a, i) => (
-                                                <Tab key={a.id} label={`Attempt ${a.attempt}`} value={i} />
+                                                <Tab key={a.id} label={ru.common.attemptN(a.attempt)} value={i} />
                                             ))}
                                         </Tabs>
                                         <Box sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: .5 }}>
-                                                <Typography variant='subtitle2'>Attempt {selectedAttempt.attempt}</Typography>
-                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                                    <Chip size='small' label={`Grade: ${typeof selectedAttempt.grade === 'number' ? selectedAttempt.grade.toFixed(2) : '—'}`} />
+                                                <Typography variant='subtitle2'>{ru.common.attemptN(selectedAttempt.attempt)}</Typography>
+                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                                                    <Chip size='small' label={ru.player.gradeLine(typeof selectedAttempt.grade === 'number' ? formatNumber(selectedAttempt.grade, 2) : '—')} />
                                                     <Typography variant='caption' color='text.secondary'>
                                                         {selectedAttempt.createdAt ? formatDateTimeDDMMYYYYHHmm(selectedAttempt.createdAt) : ''}
                                                     </Typography>
                                                 </Box>
                                             </Box>
-                                            <Typography variant='caption' color='text.secondary'>SQL</Typography>
+                                            <Typography variant='caption' color='text.secondary'>{ru.player.sql}</Typography>
                                             <Box sx={{ mt: .5, p: .75, bgcolor: 'background.default', borderRadius: 1, fontFamily: 'ui-monospace,monospace' }}>
                                                 <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>{selectedAttempt.sql || '--'}</Typography>
                                             </Box>
                                             <Box sx={{ mt: 1 }}>
-                                                <Typography variant='caption' color='text.secondary'>Feedback</Typography>
+                                                <Typography variant='caption' color='text.secondary'>{ru.common.feedback}</Typography>
                                                 {Array.isArray(selectedAttempt.feedback) && selectedAttempt.feedback.length ? (
                                                     <Box component='ul' sx={{ pl: 2.25, my: .25, listStyle: 'none' }}>
-                                                        {selectedAttempt.feedback.map((f, i) => <li key={i}><Typography variant='body2' sx={{ whiteSpace: 'pre-line' }}>{f}</Typography></li>)}
+                                                        {selectedAttempt.feedback.map((f, i) => <li key={i}><Typography variant='body2' sx={{ whiteSpace: 'pre-line' }}>{displayFeedback(String(f))}</Typography></li>)}
                                                     </Box>
                                                 ) : (
-                                                    <Typography variant='caption' color='text.secondary'>No feedback.</Typography>
+                                                    <Typography variant='caption' color='text.secondary'>{ru.player.noFeedback}</Typography>
                                                 )}
                                             </Box>
                                         </Box>
@@ -789,16 +790,16 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
                     <Card variant='outlined'>
                         <CardContent>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
-                                <Button size='small' startIcon={<ArrowBackIcon />} disabled={activeIdx === 0} onClick={prev}>Previous</Button>
-                                <Button size='small' endIcon={<ArrowForwardIcon />} disabled={activeIdx === (assignment.questions.length - 1)} onClick={next}>Next</Button>
+                                <Button size='small' startIcon={<ArrowBackIcon />} disabled={activeIdx === 0} onClick={prev}>{ru.common.previous}</Button>
+                                <Button size='small' endIcon={<ArrowForwardIcon />} disabled={activeIdx === (assignment.questions.length - 1)} onClick={next}>{ru.common.next}</Button>
                             </Box>
-                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1 }}>Navigate through questions. {submission ? `Submission: ${submission.id.substring(0, 8)}` : 'Creating submission…'}{isLocked && ' • Locked'}</Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1 }}>{ru.player.navigateQuestions} {submission ? ru.player.submission(submission.id.substring(0, 8)) : ru.player.creating}{isLocked && ru.player.lockedShort}</Typography>
                         </CardContent>
                     </Card>
                 </Box>
             </CardContent>
             <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant='caption' color='text.secondary'>Progress {activeIdx + 1}/{assignment.questions.length}{submitted && !previewMode && ' • Submitted'}{isLocked && !previewMode && ' • Locked'}{previewMode && ' • Preview only'}</Typography>
+                <Typography variant='caption' color='text.secondary'>{ru.player.progress(activeIdx + 1, assignment.questions.length)}{submitted && !previewMode && ru.player.submittedShort}{isLocked && !previewMode && ru.player.lockedShort}{previewMode && ru.player.previewOnly}</Typography>
             </CardActions>
         </Card>
     );

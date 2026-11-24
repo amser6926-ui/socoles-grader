@@ -2,6 +2,7 @@ import { Box, Card, CardContent, Typography, Chip } from '@mui/material';
 import TilesGrid from '@/components/TilesGrid';
 import React from 'react';
 import { useTheme, alpha } from '@mui/material/styles';
+import { formatNumber, formatPercent } from '@/i18n';
 
 interface MetricCardProps { label: string; value: number | string; icon?: React.ReactNode; helper?: string; delta?: number | null; color?: string; iconColor?: string; }
 
@@ -34,11 +35,11 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon, helper, del
                         </Box>
                     )}
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>{label}</Typography>
-                    {showDelta && <Chip size="small" label={(positive ? '+' : '') + (delta! * 100).toFixed(0) + '%'} color={positive ? 'success' : 'error'} variant="outlined" />}
+                    {showDelta && <Chip size="small" label={(positive ? '+' : '') + formatPercent(delta!, 0)} color={positive ? 'success' : 'error'} variant="outlined" />}
                 </Box>
                 <Typography variant="h5" sx={{ lineHeight: 1.2 }}>
                     {typeof value === 'number'
-                        ? (Number.isInteger(value) ? value.toString() : value.toFixed(2))
+                        ? (Number.isInteger(value) ? formatNumber(value, 0) : formatNumber(value, 2))
                         : value}
                 </Typography>
                 {helper && <Typography variant="caption" color="text.secondary">{helper}</Typography>}

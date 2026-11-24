@@ -4,6 +4,7 @@ import { Box, Card, CardContent, CardHeader, CircularProgress, Typography } from
 import Logo from '@/components/Logo';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { m, uiError } from '@/i18n';
 
 export default function InstructorCallback() {
     const router = useRouter();
@@ -22,15 +23,15 @@ export default function InstructorCallback() {
                         router.replace('/login/instructor?provision=1');
                         return;
                     }
-                    throw new Error(data?.error || 'Exchange failed');
+                    throw new Error(uiError(data?.error, m.errors.generic));
                 }
                 const { token, instructor } = data;
-                if (!token || !instructor?.id) throw new Error('Invalid session');
+                if (!token || !instructor?.id) throw new Error(uiError('Invalid session', m.errors.generic));
                 localStorage.setItem('sqlgrader.instructor', JSON.stringify({ token, email: instructor.email, id: instructor.id, name: instructor.name }));
                 setUser({ name: instructor.email, role: 'instructor', token, instructorId: instructor.id });
                 router.replace('/');
             } catch (e: any) {
-                setError(e.message || 'SSO exchange failed');
+                setError(uiError(e, m.errors.generic));
                 setLoading(false);
             }
         })();
@@ -83,8 +84,8 @@ export default function InstructorCallback() {
                         }}>
                             <Box sx={{ display: 'grid', placeItems: 'center' }}>
                                 <Logo height={48} variant="default" />
-                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>Finalizing sign in…</Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.9 }}>Please wait while we verify your session</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>{m.auth.finalizing}</Typography>
+                                <Typography variant="body2" sx={{ opacity: 0.9 }}>{m.auth.pleaseWait}</Typography>
                             </Box>
                         </Box>
                     }
