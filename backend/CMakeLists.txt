@@ -38,8 +38,8 @@ endif()
 add_executable(test_socoles  test.cpp utils.cpp tree_edit_distance.cpp grader.cpp sql_keywords.cpp abstract_syntax_tree.cpp model_query.cpp student_query.cpp admin.cpp my_duckdb.cpp process_queries.cpp limits.cpp metrics.cpp #uery_generator.cpp
                 my_evosql.cpp goals.cpp thread_pool.cpp clauses/select/from_clause.cpp clauses/select/where_clause.cpp clauses/select/select_clause.cpp clauses/insert_clause.cpp clauses/common.cpp
                 clauses/select/group_by_clause.cpp clauses/select/having_clause.cpp clauses/select/order_by_clause.cpp clauses/select/limit_clause.cpp
-                clauses/assertion_clause.cpp clauses/create_clause.cpp clauses/delete_clause.cpp clauses/update_clause.cpp clauses/create_view.cpp clauses/alter_clause.cpp
-                my_postgresql.cpp query_engine.cpp)       
+                clauses/assertion_clause.cpp clauses/create_clause.cpp clauses/delete_clause.cpp clauses/update_clause.cpp clauses/create_view.cpp clauses/alter_clause.cpp clauses/drop_clause.cpp
+                my_postgresql.cpp query_engine.cpp sql_guard.cpp)       
 target_include_directories(test_socoles  PRIVATE ${PostgreSQL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${DUCKDB_INCLUDE_DIR})
 target_link_libraries(test_socoles  PRIVATE ${PostgreSQL_LIBRARIES} ${PQXX_LIBRARIES} ${PG_QUERY_LIBRARY} nlohmann_json::nlohmann_json ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${DUCKDB_LIBRARY} -lpthread ${Boost_LIBRARIES} Crow::Crow OpenSSL::SSL OpenSSL::Crypto) 
 target_compile_definitions(test_socoles  PRIVATE BOOST_TEST_DYN_LINK)
@@ -48,7 +48,7 @@ target_compile_definitions(test_socoles  PRIVATE BOOST_TEST_DYN_LINK)
 add_executable(socoles_server server.cpp utils.cpp tree_edit_distance.cpp grader.cpp sql_keywords.cpp abstract_syntax_tree.cpp model_query.cpp student_query.cpp admin.cpp my_duckdb.cpp process_queries.cpp limits.cpp metrics.cpp #query_generator.cpp
                 my_evosql.cpp goals.cpp thread_pool.cpp clauses/select/from_clause.cpp clauses/select/where_clause.cpp clauses/select/select_clause.cpp clauses/insert_clause.cpp clauses/common.cpp
                 clauses/select/group_by_clause.cpp clauses/select/having_clause.cpp clauses/select/order_by_clause.cpp clauses/select/limit_clause.cpp
-                clauses/assertion_clause.cpp clauses/create_clause.cpp clauses/delete_clause.cpp clauses/update_clause.cpp clauses/create_view.cpp clauses/alter_clause.cpp
-                my_postgresql.cpp query_engine.cpp)
+                clauses/assertion_clause.cpp clauses/create_clause.cpp clauses/delete_clause.cpp clauses/update_clause.cpp clauses/create_view.cpp clauses/alter_clause.cpp clauses/drop_clause.cpp
+                my_postgresql.cpp query_engine.cpp sql_guard.cpp)
 target_include_directories(socoles_server PRIVATE ${PostgreSQL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} ${DUCKDB_INCLUDE_DIR})
 target_link_libraries(socoles_server PRIVATE ${PostgreSQL_LIBRARIES} ${PQXX_LIBRARIES} ${PG_QUERY_LIBRARY} nlohmann_json::nlohmann_json ${DUCKDB_LIBRARY} -lpthread ${Boost_LIBRARIES} Crow::Crow OpenSSL::SSL OpenSSL::Crypto ${ZLIB_LIBRARIES})

@@ -20,6 +20,7 @@
 #include "clauses/delete_clause.h"
 #include "clauses/create_view.h"
 #include "clauses/alter_clause.h"
+#include "clauses/drop_clause.h"
 
 Goals::Goals()
 {
@@ -182,9 +183,16 @@ std::vector<Goals::Goal> Goals::process_query(const std::shared_ptr<AbstractSynt
             goals.push_back({"Alter", alter_result.first});
         }
     }
+    else if (stmt_type == "DropStmt")
+    {
+        auto drop_info = Drop_clause::get_info(stmt_node);
+        if (drop_info.supported && !drop_info.object_name.empty())
+            goals.push_back({"Drop", "DROP " + drop_info.object_name});
+        else
+            goals.push_back({"Unknown", "DROP target is not a supported table or view."});
+    }
     else
     {
-        // Other statement types (e.g., DROP) can be added similarly
         goals.push_back({"Unknown", "Statement type not handled."});
     }
 
@@ -578,6 +586,11 @@ Common::comparision_result Goals::compare_single_statement(const std::shared_ptr
 
         info = create_view_cmp;
         success_message = "Excellent! Your CREATE VIEW statement matches the reference.\n";
+    }
+    else if (ref_type == "DropStmt")
+    {
+        info = Drop_clause::compare(Drop_clause::get_info(ref_stmt_node), Drop_clause::get_info(stu_stmt_node));
+        success_message = "Excellent! Your DROP statement matches the reference.\n";
     }
     else
     {

@@ -20,6 +20,10 @@ public:
             std::string name;
             std::string type;
             bool not_null = false;
+            bool has_default = false;
+            bool default_unparsed = false;
+            std::string default_expr;
+            bool type_unparsed = false;
         };
         std::vector<column_definition> columns;
         std::vector<std::string> primary_key_columns;

@@ -1,0 +1,37 @@
+{
+  "note": "Synthetic fixture. Not imported into a database. Two variants of ten CREATE tasks; a student who picks one variant is assigned five of that variant at random. Points are 2 each.",
+  "drawCount": 5,
+  "pointsEach": 2,
+  "variants": [
+    {
+      "label": "A",
+      "questions": [
+        {"title": "A1 room", "modelSql": "CREATE TABLE room (name text, seats integer);"},
+        {"title": "A2 lamp", "modelSql": "CREATE TABLE lamp (room text, on_flag boolean);"},
+        {"title": "A3 event", "modelSql": "CREATE TABLE event (title text, day date);"},
+        {"title": "A4 price", "modelSql": "CREATE TABLE price (label text, amount numeric(8,2));"},
+        {"title": "A5 tag", "modelSql": "CREATE TABLE tag (name varchar(20));"},
+        {"title": "A6 note", "modelSql": "CREATE TABLE note (body text[]);"},
+        {"title": "A7 desk", "modelSql": "CREATE TABLE desk (code char(4), room text);"},
+        {"title": "A8 visit", "modelSql": "CREATE TABLE visit (guest text, arrived date);"},
+        {"title": "A9 score", "modelSql": "CREATE TABLE score (student text, value integer);"},
+        {"title": "A10 flag", "modelSql": "CREATE TABLE flag (name text, active boolean);"}
+      ]
+    },
+    {
+      "label": "B",
+      "questions": [
+        {"title": "B1 book", "modelSql": "CREATE TABLE book (title text, pages integer);"},
+        {"title": "B2 copy", "modelSql": "CREATE TABLE copy (book text, available boolean);"},
+        {"title": "B3 loan", "modelSql": "CREATE TABLE loan (reader text, due date);"},
+        {"title": "B4 fine", "modelSql": "CREATE TABLE fine (reason text, amount numeric(6,2));"},
+        {"title": "B5 shelf", "modelSql": "CREATE TABLE shelf (code varchar(12));"},
+        {"title": "B6 author", "modelSql": "CREATE TABLE author (names text[]);"},
+        {"title": "B7 card", "modelSql": "CREATE TABLE card (code char(8), reader text);"},
+        {"title": "B8 hold", "modelSql": "CREATE TABLE hold (reader text, until date);"},
+        {"title": "B9 edition", "modelSql": "CREATE TABLE edition (book text, year integer);"},
+        {"title": "B10 open", "modelSql": "CREATE TABLE open_hour (weekday text, is_open boolean);"}
+      ]
+    }
+  ]
+}

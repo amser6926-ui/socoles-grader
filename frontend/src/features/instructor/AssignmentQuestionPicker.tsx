@@ -16,6 +16,7 @@ import {
     LinearProgress,
     Alert,
     InputAdornment,
+    MenuItem,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -87,11 +88,23 @@ const AssignmentQuestionPicker = forwardRef<AssignmentQuestionPickerHandle, Pick
     useEffect(() => { loadBank(); }, [user?.token]);
     useEffect(() => { loadLinked(); }, [assignId, user?.token]);
 
+    const [variants, setVariants] = useState<Array<{ id: string; label: string; title: string }>>([]);
+    const [variantId, setVariantId] = useState('');
+    useEffect(() => {
+        if (!assignId || !user?.token) return;
+        void authFetch(`/api/assignment-variants?assignmentId=${assignId}`).then(async (res) => {
+            if (!res.ok) return;
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : [];
+            setVariants(list);
+            setVariantId((current) => current || list[0]?.id || '');
+        }).catch(() => undefined);
+    }, [assignId, user?.token, authFetch]);
     async function addQuestion(q: Question) {
         if (!assignId) return;
         try {
             if (!user?.token) throw new Error('Not authenticated');
-            const res = await authFetch('/api/assignment-questions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: assignId, questionId: q.id, position: linked.length }) });
+            const res = await authFetch('/api/assignment-questions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: assignId, questionId: q.id, position: linked.length, variantId: variantId || null }) });
             if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed');
             await loadLinked();
         } catch (e: any) { setError(uiError(e, ru.errors.assignQuestion)); }
@@ -152,8 +165,13 @@ const AssignmentQuestionPicker = forwardRef<AssignmentQuestionPickerHandle, Pick
                         </Box>
                         <Tooltip title={ru.picker.refresh}><span><IconButton onClick={loadBank} disabled={loadingBank} aria-label={ru.picker.refresh}><RefreshIcon fontSize="small" /></IconButton></span></Tooltip>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1, flexWrap: 'wrap' }}>
                         <TextField size="small" variant="outlined" placeholder={ru.common.filter} value={filter} onChange={e => setFilter(e.target.value)} fullWidth />
+                        {variants.length > 0 && (
+                            <TextField select size='small' label={ru.variants.placeIn} value={variantId} onChange={(e) => setVariantId(e.target.value)} sx={{ minWidth: 200 }}>
+                                {variants.map((v) => <MenuItem key={v.id} value={v.id}>{v.title || v.label}</MenuItem>)}
+                            </TextField>
+                        )}
                     </Box>
                     <Box
                         sx={{

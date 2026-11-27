@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { initSchema, query, withCourseContext, withInstructorContext } from '@/lib/db';
 import type { Submission } from '@/lib/types';
 import { parseAuthHeader, verifyJwt } from '@/lib/auth';
+import { ensureDraw, readDraw } from '@/lib/drawAccess';
 
 let initialized = false;
 async function ensureInit() { if (!initialized) { await initSchema(); initialized = true; } }
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
         if (!token) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
         const payload = verifyJwt(token);
         if (!payload) return NextResponse.json({ error: 'invalid token' }, { status: 401 });
-        const body: Partial<Submission> & { date?: string; assignment?: string } = await req.json();
+        const body: Partial<Submission> & { date?: string; assignment?: string; variantId?: string } = await req.json();
         const student = body.student;
         const assignmentTitle = body.assignment;
         const date = body.date;
@@ -80,6 +81,23 @@ export async function POST(req: Request) {
         // Canonicalize student identity: for student role, always use email from JWT; otherwise use provided value
         const effectiveStudent = payload.role === 'student' ? payload.email : (student || '');
         if (!effectiveStudent) return NextResponse.json({ error: 'student required' }, { status: 400 });
+        if (assignmentId && payload.role === 'student') {
+            const variantError = await run(async () => {
+                const { rows: meta } = await query<{ drawCount: number | null }>(
+                    `SELECT draw_count as "drawCount" FROM assignments WHERE id=$1
+                       AND owner_id = current_setting('app.current_instructor')::uuid
+                       AND course_id = current_setting('app.current_course', true)::uuid`, [assignmentId]);
+                if (meta[0]?.drawCount == null) return null;
+                const existing = await readDraw(assignmentId, effectiveStudent);
+                if (!existing && !body.variantId) return 'variant required';
+                if (!existing && body.variantId) {
+                    try { await ensureDraw(assignmentId, effectiveStudent, body.variantId); }
+                    catch (err) { return err instanceof Error ? err.message : 'invalid variant'; }
+                }
+                return null;
+            });
+            if (variantError) return NextResponse.json({ error: variantError }, { status: 400 });
+        }
         const { rows } = await run(() => query<Submission>(
             `INSERT INTO submissions (student, assignment, assignment_id, date, grade, status, owner_id)
              VALUES ($1,$2,$3,$4,$5,$6,current_setting('app.current_instructor')::uuid)

@@ -39,8 +39,11 @@ ProcessQueries::ProcessQueries(std::vector<ModelQuery> &model_queries, std::vect
                                const Admin &admin, Grader &grader)
     : query_engine(db_opts) // ← initialize our engine
 {
-    // lets clear the database just in case
-    query_engine.clear();
+    const bool isolated = db_opts.is_front_end && db_opts.use_postgresql;
+    if (isolated)
+        query_engine.begin_isolated_job();
+    else
+        query_engine.clear();
     query_engine.initialize();
     Goals goals;
     // Initialize the worker threads
@@ -152,8 +155,10 @@ ProcessQueries::ProcessQueries(std::vector<ModelQuery> &model_queries, std::vect
     }
 
     std::cout << "Grading the queries finished." << std::endl;
-    // clear the engine
-    query_engine.clear();
+    if (db_opts.is_front_end && db_opts.use_postgresql)
+        query_engine.end_isolated_job();
+    else
+        query_engine.clear();
 }
 
 template <typename T>

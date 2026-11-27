@@ -77,6 +77,9 @@ export default function AssignmentQuestionManager() {
     const [filter, setFilter] = useState('');
     const [attemptsAllowed, setAttemptsAllowed] = useState<number>(3);
     const [published, setPublished] = useState(false);
+    const [drawEnabled, setDrawEnabled] = useState(false);
+    const [copyCourseId, setCopyCourseId] = useState('');
+    const [courses, setCourses] = useState<Array<{ id: string; name: string }>>([]);
 
     const selected = useMemo<Assignment | AssignmentWithQuestions | null>(() => assignments.find(a => a.id === selectedId) || null, [assignments, selectedId]);
     const [pickerMode, setPickerMode] = useState(false);
@@ -146,6 +149,7 @@ export default function AssignmentQuestionManager() {
         setTags((a.tags || []).join(', '));
         setAttemptsAllowed((a as any).attemptsAllowed ?? 3);
         setPublished(!!(a as any).published);
+        setDrawEnabled(Number((a as { drawCount?: number | null }).drawCount) > 0);
         setError(null);
         setSelectedId(null);
         setView('editor');
@@ -165,7 +169,8 @@ export default function AssignmentQuestionManager() {
                     difficulty: difficulty || 'Beginner',
                     tags: tags.split(',').map(t => t.trim()).filter(Boolean),
                     attemptsAllowed: Math.max(1, Math.floor(Number(attemptsAllowed) || 1)),
-                    published
+                    published,
+                    drawCount: drawEnabled ? 5 : null,
                 })
             });
             if (!res.ok) {
@@ -173,11 +178,23 @@ export default function AssignmentQuestionManager() {
                 throw new Error(err?.error || 'Update failed');
             }
             const updated = await res.json();
+            if (drawEnabled) {
+                await authFetch('/api/assignment-variants', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: editingId, label: 'A', title: ru.variants.variantA }) });
+                await authFetch('/api/assignment-variants', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: editingId, label: 'B', title: ru.variants.variantB }) });
+            }
             setAssignments(list => list.map(a => a.id === updated.id ? updated : a));
             setNote(ru.assignments.updated);
             setEditingId(null);
             setView('list');
         } catch (e: any) { setError(uiError(e, ru.errors.updateAssignment)); }
+    }
+    async function copyToCourse() {
+        if (!editingId || !copyCourseId) return;
+        try {
+            const res = await authFetch('/api/assignments/copy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: editingId, targetCourseId: copyCourseId }) });
+            if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'failed');
+            setNote(ru.variants.copyDone);
+        } catch (e: unknown) { setError(uiError(e, ru.errors.generic)); }
     }
     async function deleteAssignment(id: string) {
         if (!confirm(ru.assignments.deleteConfirm)) return;
@@ -304,6 +321,21 @@ export default function AssignmentQuestionManager() {
                             label={statusLabel(published ? 'Published' : 'Draft')}
                             sx={{ mt: 1, '& .MuiFormControlLabel-label': { whiteSpace: 'normal' } }}
                         />
+                        <FormControlLabel
+                            control={<Switch checked={drawEnabled} onChange={(_, v) => setDrawEnabled(v)} size='small' />}
+                            label={ru.variants.enable}
+                            sx={{ mt: 1, '& .MuiFormControlLabel-label': { whiteSpace: 'normal' } }}
+                        />
+                        {drawEnabled && <Typography variant='caption' color='text.secondary' sx={{ display: 'block', whiteSpace: 'normal' }}>{ru.variants.enableHelp}</Typography>}
+                        {editingId && (
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1, alignItems: 'center' }}>
+                                <TextField select size='small' label={ru.variants.copy} value={copyCourseId} onFocus={() => { void authFetch('/api/instructor/courses').then((r) => r.json()).then((d) => setCourses(Array.isArray(d?.courses) ? d.courses : [])).catch(() => undefined); }} onChange={(e) => setCopyCourseId(e.target.value)} sx={{ minWidth: 220 }}>
+                                    <MenuItem value=''>{ru.common.select}</MenuItem>
+                                    {courses.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+                                </TextField>
+                                <Button size='small' variant='outlined' disabled={!copyCourseId} onClick={() => void copyToCourse()} sx={{ whiteSpace: 'normal' }}>{ru.variants.copy}</Button>
+                            </Box>
+                        )}
                         {error && <Typography variant='caption' color='error' sx={{ mt: 1, display: 'block' }}>{error}</Typography>}
                         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1, flexWrap: 'wrap' }}>
                             <Button variant='outlined' size='small' onClick={() => { setEditingId(null); setView('list'); }} sx={{ whiteSpace: 'normal' }}>{ru.common.cancel}</Button>

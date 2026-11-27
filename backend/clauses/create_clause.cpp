@@ -6,6 +6,100 @@
 #include <sstream>
 #include <map>
 
+namespace
+{
+    void collect_numbers(const std::shared_ptr<AbstractSyntaxTree::Node> &node, std::vector<std::string> &out)
+    {
+        if (!node)
+            return;
+        if ((node->key == "ival" || node->key == "fval") && !node->value.empty())
+        {
+            out.push_back(Common::strip_quotes(node->value));
+            return;
+        }
+        for (const auto &child : node->children)
+            collect_numbers(child, out);
+    }
+
+    int count_bounds(const std::shared_ptr<AbstractSyntaxTree::Node> &bounds)
+    {
+        if (!bounds)
+            return 0;
+        int count = 0;
+        for (const auto &child : bounds->children)
+        {
+            if (child->key != "location")
+                count++;
+        }
+        return count;
+    }
+
+    std::string flatten_expr(const std::shared_ptr<AbstractSyntaxTree::Node> &node)
+    {
+        if (!node)
+            return "";
+        if ((node->key == "sval" || node->key == "ival" || node->key == "fval") && !node->value.empty())
+            return Common::strip_quotes(node->value);
+        std::string acc;
+        for (const auto &child : node->children)
+        {
+            std::string part = flatten_expr(child);
+            if (part.empty())
+                continue;
+            if (!acc.empty())
+                acc += " ";
+            acc += part;
+        }
+        return acc;
+    }
+}
+
+static std::string format_column_type(const std::shared_ptr<AbstractSyntaxTree::Node> &typeName, bool &unparsed)
+{
+    unparsed = false;
+    std::string name;
+    auto names_node = typeName->get_child("names");
+    if (names_node && !names_node->children.empty())
+    {
+        auto last = names_node->children.back();
+        if (last->key == "String")
+        {
+            auto sval = last->get_child("sval");
+            if (sval)
+                name = Common::strip_quotes(sval->value);
+        }
+    }
+    std::vector<std::string> mods;
+    auto typmods = typeName->get_child("typmods");
+    if (typmods)
+    {
+        collect_numbers(typmods, mods);
+        if (mods.empty())
+            unparsed = true;
+    }
+    std::ostringstream out;
+    out << name;
+    if (!mods.empty())
+    {
+        out << "(";
+        for (size_t i = 0; i < mods.size(); ++i)
+        {
+            if (i)
+                out << ",";
+            out << mods[i];
+        }
+        out << ")";
+    }
+    else if (unparsed)
+    {
+        out << "(unparsed)";
+    }
+    int dims = count_bounds(typeName->get_child("arrayBounds"));
+    for (int i = 0; i < dims; ++i)
+        out << "[]";
+    return out.str();
+}
+
 std::string Create_clause::fk_action_phrase(const std::string &action)
 {
     if (action.empty())
@@ -101,22 +195,9 @@ Create_clause::create_clause_info Create_clause::get_info(const std::shared_ptr<
                     create_clause_info::column_definition col;
                     col.name = Common::strip_quotes(elt->get_value("colname"));
 
-                    // Extract type info from typeName
                     auto typeName_node = elt->get_child("typeName");
                     if (typeName_node)
-                    {
-                        // Usually varchar or int is under names:
-                        auto names_node = typeName_node->get_child("names");
-                        if (names_node && !names_node->children.empty())
-                        {
-                            // Last String node often has the actual type name
-                            auto last_name_node = names_node->children.back();
-                            if (last_name_node->key == "String")
-                            {
-                                col.type = Common::strip_quotes(last_name_node->get_child("sval")->value);
-                            }
-                        }
-                    }
+                        col.type = format_column_type(typeName_node, col.type_unparsed);
 
                     // Check constraints in ColumnDef for NOT NULL
                     auto constraints_node = elt->get_child("constraints");
@@ -135,6 +216,13 @@ Create_clause::create_clause_info Create_clause::get_info(const std::shared_ptr<
                                 {
                                     // If a column-level primary key is defined, add it to the primary key list.
                                     info.primary_key_columns.push_back(col.name);
+                                }
+                                else if (contype == "CONSTR_DEFAULT")
+                                {
+                                    col.has_default = true;
+                                    auto raw_expr_node = cst->get_child("raw_expr");
+                                    col.default_expr = flatten_expr(raw_expr_node);
+                                    col.default_unparsed = col.default_expr.empty();
                                 }
                                 else if (contype == "CONSTR_CHECK")
                                 {
@@ -495,6 +583,13 @@ Common::comparision_result Create_clause::compare(const create_clause_info &refe
                 equal = false;
             }
             // Compare NOT NULL constraint.
+            if (refCol.type_unparsed || it->type_unparsed)
+            {
+                incorrect_parts.push_back("Type of '" + refCol.name + "'");
+                message << "● The type modifier for column '" << refCol.name << "' could not be verified, so it is not accepted.\n";
+                next_steps.push_back("💡 Write the full type, including length or precision, for '" + refCol.name + "'.");
+                equal = false;
+            }
             if (refCol.not_null != it->not_null)
             {
                 incorrect_parts.push_back("NOT NULL constraint for '" + refCol.name + "'");
@@ -502,6 +597,16 @@ Common::comparision_result Create_clause::compare(const create_clause_info &refe
                         << " a NOT NULL constraint, but your statement " << (it->not_null ? "has" : "does not have") << " it.\n";
                 next_steps.push_back("💡 Adjust the NOT NULL constraint for column '" + refCol.name + "'.");
                 equal = false;
+            }
+            if (refCol.has_default || it->has_default || refCol.default_unparsed || it->default_unparsed)
+            {
+                if (refCol.default_unparsed || it->default_unparsed || refCol.has_default != it->has_default || refCol.default_expr != it->default_expr)
+                {
+                    incorrect_parts.push_back("DEFAULT for '" + refCol.name + "'");
+                    message << "● DEFAULT for column '" << refCol.name << "' does not match the reference or could not be verified.\n";
+                    next_steps.push_back("💡 Set DEFAULT for '" + refCol.name + "' exactly as specified.");
+                    equal = false;
+                }
             }
         }
     }

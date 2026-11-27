@@ -82,13 +82,17 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
     try
     {
         work tx{conn};
+        auto schema_res = tx.exec("SELECT current_schema()");
+        if (schema_res.empty() || schema_res[0][0].is_null())
+            throw std::runtime_error("no current schema");
+        const std::string snap_lit = conn.quote(schema_res[0][0].c_str());
 
         // 1) Snapshot tables before
         std::vector<std::string> before_tables;
         {
             auto tbls = tx.exec(
                 "SELECT tablename FROM pg_catalog.pg_tables "
-                "WHERE schemaname='public';");
+                "WHERE schemaname=" + snap_lit);
             for (auto const &r : tbls)
             {
                 before_tables.push_back(r[0].c_str());
@@ -100,7 +104,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         {
             auto res = tx.exec(
                 "SELECT viewname, definition FROM pg_catalog.pg_views "
-                "WHERE schemaname='public';");
+                "WHERE schemaname=" + snap_lit);
             for (auto const &row : res)
             {
                 before_views[row[0].c_str()] = row[1].c_str();
@@ -142,7 +146,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         {
             std::ostringstream q;
             q << "SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='"
+                 "WHERE table_schema=" << snap_lit << " AND table_name='"
               << tbl << "' ORDER BY ordinal_position;";
             auto res = tx.exec(q.str());
             std::vector<std::string> cols;
@@ -160,7 +164,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         {
             std::ostringstream q;
             q << "SELECT data_type FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='"
+                 "WHERE table_schema=" << snap_lit << " AND table_name='"
               << tbl << "' ORDER BY ordinal_position;";
             auto res = tx.exec(q.str());
             std::vector<std::string> types;
@@ -181,7 +185,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
                  "FROM pg_constraint c "
                  "JOIN pg_class t ON c.conrelid = t.oid "
                  "JOIN pg_namespace n ON t.relnamespace = n.oid "
-                 "WHERE n.nspname='public' AND t.relname='"
+                 "WHERE n.nspname=" << snap_lit << " AND t.relname='"
               << tbl << "' AND c.contype='c';";
             auto res = tx.exec(q.str());
             std::vector<std::string> defs;
@@ -247,7 +251,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         {
             auto tbls = tx.exec(
                 "SELECT tablename FROM pg_catalog.pg_tables "
-                "WHERE schemaname='public';");
+                "WHERE schemaname=" + snap_lit);
             for (auto const &r : tbls)
             {
                 after_tables.push_back(r[0].c_str());
@@ -259,7 +263,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         {
             auto res = tx.exec(
                 "SELECT viewname, definition FROM pg_catalog.pg_views "
-                "WHERE schemaname='public';");
+                "WHERE schemaname=" + snap_lit);
             for (auto const &row : res)
             {
                 after_views[row[0].c_str()] = row[1].c_str();
@@ -301,7 +305,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         {
             std::ostringstream q;
             q << "SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='"
+                 "WHERE table_schema=" << snap_lit << " AND table_name='"
               << tbl << "' ORDER BY ordinal_position;";
             auto res = tx.exec(q.str());
             std::vector<std::string> cols;
@@ -319,7 +323,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         {
             std::ostringstream q;
             q << "SELECT data_type FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='"
+                 "WHERE table_schema=" << snap_lit << " AND table_name='"
               << tbl << "' ORDER BY ordinal_position;";
             auto res = tx.exec(q.str());
             std::vector<std::string> types;
@@ -340,7 +344,7 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
                  "FROM pg_constraint c "
                  "JOIN pg_class t ON c.conrelid = t.oid "
                  "JOIN pg_namespace n ON t.relnamespace = n.oid "
-                 "WHERE n.nspname='public' AND t.relname='"
+                 "WHERE n.nspname=" << snap_lit << " AND t.relname='"
               << tbl << "' AND c.contype='c';";
             auto res = tx.exec(q.str());
             std::vector<std::string> defs;
@@ -358,6 +362,11 @@ MyPostgres::execute_query_not_select(const std::string &query, std::string &erro
         tx.abort(); // rollback everything
 
         // 8) Detect diffs
+        for (auto const &tbl : before_tables)
+        {
+            if (std::find(after_tables.begin(), after_tables.end(), tbl) == after_tables.end())
+                data.push_back({tbl, "table_dropped", "removed"});
+        }
 
         // 8a) Column additions/removals
         for (auto const &tbl : before_tables)
@@ -595,7 +604,7 @@ MyPostgres::get_column_types(const std::string &table_name)
         work tx{conn};
         auto res = tx.exec_params(
             "SELECT data_type FROM information_schema.columns "
-            "WHERE table_schema='public' AND table_name=$1 "
+            "WHERE table_schema=current_schema() AND table_name=$1 "
             "ORDER BY ordinal_position;",
             table_name);
         for (auto const &r : res)

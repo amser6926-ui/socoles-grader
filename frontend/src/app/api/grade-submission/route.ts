@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initSchema, query, withCourseContext, withInstructorContext } from '@/lib/db';
 import { parseAuthHeader, verifyJwt } from '@/lib/auth';
 import { GradeSubmissionRequest, GradeSubmissionResponse, PerQuestionGradeResult, QuestionRubric } from '@/lib/types';
+import { questionIdsForGrading } from '@/lib/drawAccess';
 
 let initialized = false;
 async function ensureInit() { if (!initialized) { await initSchema(); initialized = true; } }
@@ -37,12 +38,15 @@ async function gradeSubmissionCore(instructorId: string, submissionId: string, c
         const submission = subRes.rows[0];
         if (!submission.assignmentId) throw new Error('Assignment not found for submission');
         interface RawQuestionRow { id: string; title: string; model_sql: string; model_queries: string[] | null; init_sql: string | null; use_default_grading: boolean | null; grading_options: Record<string, unknown> | null }
-        const { rows: questions } = await query<RawQuestionRow>(
+        const allowedIds = await questionIdsForGrading(submission.assignmentId, submission.student);
+        if (allowedIds && allowedIds.length === 0) throw new Error('variant not chosen');
+        const { rows: questionRows } = await query<RawQuestionRow>(
             `SELECT q.id, q.title, q.model_sql, q.model_queries, q.init_sql, q.use_default_grading, q.grading_options
              FROM assignment_questions aq JOIN questions q ON q.id = aq.question_id
              WHERE aq.assignment_id=$1 AND aq.owner_id = current_setting('app.current_instructor')::uuid
              ORDER BY aq.position ASC`, [submission.assignmentId]
         );
+        const questions = allowedIds ? questionRows.filter((q) => allowedIds.includes(q.id)) : questionRows;
         interface RawQuestionSubmissionRow { id: string; question_id: string; sql: string; grade: number | null; status: string; rubric: QuestionRubric | null; feedback: string[]; attempt: number }
         const { rows: qsRows } = await query<RawQuestionSubmissionRow>(`SELECT id, question_id, sql, grade::float8 as grade, status, rubric, feedback, attempt
              FROM question_submissions WHERE submission_id=$1 AND owner_id = current_setting('app.current_instructor')::uuid ORDER BY created_at ASC`, [submissionId]);

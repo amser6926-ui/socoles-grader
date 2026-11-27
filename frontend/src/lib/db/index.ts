@@ -356,6 +356,32 @@ export async function initSchema() {
     await query(`ALTER TABLE assignment_questions ADD COLUMN IF NOT EXISTS course_id UUID NULL REFERENCES courses(id) ON DELETE CASCADE;`);
     await query(`ALTER TABLE assignment_questions ALTER COLUMN course_id SET DEFAULT current_setting('app.current_course', true)::uuid;`);
 
+    await query(`ALTER TABLE assignments ADD COLUMN IF NOT EXISTS draw_count INT NULL;`);
+    await query(`CREATE TABLE IF NOT EXISTS assignment_variants (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      assignment_id UUID NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      owner_id UUID REFERENCES instructors(id) ON DELETE CASCADE,
+      course_id UUID NULL REFERENCES courses(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (assignment_id, label)
+    );`);
+    await query(`ALTER TABLE assignment_variants ALTER COLUMN course_id SET DEFAULT current_setting('app.current_course', true)::uuid;`);
+    await query(`ALTER TABLE assignment_questions ADD COLUMN IF NOT EXISTS variant_id UUID NULL REFERENCES assignment_variants(id) ON DELETE SET NULL;`);
+    await query(`CREATE TABLE IF NOT EXISTS assignment_draws (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      assignment_id UUID NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+      student TEXT NOT NULL,
+      variant_id UUID NOT NULL REFERENCES assignment_variants(id) ON DELETE RESTRICT,
+      question_ids UUID[] NOT NULL,
+      owner_id UUID REFERENCES instructors(id) ON DELETE CASCADE,
+      course_id UUID NULL REFERENCES courses(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (assignment_id, student, owner_id)
+    );`);
+    await query(`ALTER TABLE assignment_draws ALTER COLUMN course_id SET DEFAULT current_setting('app.current_course', true)::uuid;`);
+
     await query(`CREATE TABLE IF NOT EXISTS question_submissions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       submission_id UUID REFERENCES submissions(id) ON DELETE CASCADE,
@@ -545,6 +571,10 @@ export async function initSchema() {
     await query(`UPDATE assignment_feedback_survey s SET course_id = a.course_id
       FROM assignments a
       WHERE s.course_id IS NULL AND s.assignment_id = a.id AND a.course_id IS NOT NULL;`);
+    await query(`UPDATE assignment_variants v SET course_id = a.course_id, owner_id = COALESCE(v.owner_id, a.owner_id)
+      FROM assignments a WHERE v.assignment_id = a.id AND a.course_id IS NOT NULL AND (v.course_id IS NULL OR v.owner_id IS NULL);`);
+    await query(`UPDATE assignment_draws d SET course_id = a.course_id, owner_id = COALESCE(d.owner_id, a.owner_id)
+      FROM assignments a WHERE d.assignment_id = a.id AND a.course_id IS NOT NULL AND (d.course_id IS NULL OR d.owner_id IS NULL);`);
 
 
     // Indexes for tenant isolation performance
@@ -585,6 +615,8 @@ export async function initSchema() {
       'question_review_requests',
       'question_review_request_messages',
       'assignment_feedback_survey',
+      'assignment_variants',
+      'assignment_draws',
     ];
 
     for (const t of instructorScopedTables) {
@@ -614,7 +646,7 @@ export async function initSchema() {
 
     // If no rows remain with NULL course_id, enforce NOT NULL constraints (best effort)
     try {
-      const mustNotNull = ['questions', 'datasets', 'assignments', 'submissions', 'assignment_questions', 'question_submissions', 'question_submission_attempts', 'roster', 'invites', 'question_review_requests', 'question_review_request_messages', 'assignment_feedback_survey'];
+      const mustNotNull = ['questions', 'datasets', 'assignments', 'submissions', 'assignment_questions', 'question_submissions', 'question_submission_attempts', 'roster', 'invites', 'question_review_requests', 'question_review_request_messages', 'assignment_feedback_survey', 'assignment_variants', 'assignment_draws'];
       for (const t of mustNotNull) {
         const { rows: nullCheck } = await query<{ count: string }>(`SELECT COUNT(*)::text as count FROM ${t} WHERE course_id IS NULL`);
         if (nullCheck[0] && nullCheck[0].count === '0') {

@@ -13,7 +13,7 @@ namespace Metrics
 
     static int load_capacity_from_env()
     {
-        int def = 8; // sensible default (was 4)
+        int def = 32;
         if (const char *v = std::getenv("SOCOLES_MAX_CONCURRENT_GRADE"))
         {
             try

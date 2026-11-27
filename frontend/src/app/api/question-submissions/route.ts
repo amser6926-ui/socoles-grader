@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initSchema, query, withCourseContext, withInstructorContext } from '@/lib/db';
 import { parseAuthHeader, verifyJwt } from '@/lib/auth';
+import { studentMayUseQuestion } from '@/lib/drawAccess';
 
 let initialized = false; async function ensureInit() { if (!initialized) { await initSchema(); initialized = true; } }
 
@@ -99,6 +100,9 @@ export async function POST(req: NextRequest) {
         return await run(async () => {
             const effectiveStudent = payload.role === 'student' ? payload.email : (student || '');
             if (!effectiveStudent) return NextResponse.json({ error: 'student required' }, { status: 400 });
+            if (payload.role === 'student' && !(await studentMayUseQuestion(effectiveStudent, questionId))) {
+                return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+            }
             const { rows } = await query(`INSERT INTO question_submissions (submission_id, assignment_id, question_id, student, sql, grade, status, rubric, feedback, attempt, owner_id)
                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,COALESCE((SELECT attempt FROM question_submissions WHERE submission_id=$1 AND question_id=$3 LIMIT 1), 0), current_setting('app.current_instructor')::uuid)
                 ON CONFLICT (submission_id, question_id)

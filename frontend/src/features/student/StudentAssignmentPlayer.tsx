@@ -175,6 +175,7 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
         if (previewMode) return; // skip submission creation in preview
         async function ensureParent() {
             if (!assignment || !user?.token || submission || creatingSubmissionRef.current) return;
+            if ((assignment as { needsVariant?: boolean }).needsVariant) return;
             creatingSubmissionRef.current = true;
             try {
                 const sRes = await authFetch('/api/submissions?scope=mine');
@@ -653,9 +654,36 @@ export default function StudentAssignmentPlayer({ assignmentId, onClose, onSubmi
         setGrade(null); setFeedback([]); setRubric({ syntax: 0, semantics: 0, results: 0 }); setSql('');
     }
 
+    async function chooseVariant(variantId: string) {
+        if (!assignment || !user?.token) return;
+        const res = await authFetch('/api/submissions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assignment: assignment.title, variantId, date: new Date().toISOString(), grade: 0, status: 'In Progress' }),
+        });
+        if (res.ok) await load();
+    }
+
     if (!assignmentId) return null;
     if (loading) return <Card sx={{ p: 3 }}><Typography>{ru.player.loadingAssignment}</Typography></Card>;
     if (!assignment) return <Card sx={{ p: 3 }}><Typography>{ru.player.notFound}</Typography><Button sx={{ mt: 1 }} onClick={onClose}>{ru.common.close}</Button></Card>;
+    if ((assignment as { needsVariant?: boolean }).needsVariant) {
+        const variants = (assignment as { variants?: { id: string; label: string; title: string }[] }).variants || [];
+        return (
+            <Card sx={{ p: 3, display: 'grid', gap: 1.5 }}>
+                <Typography variant='subtitle1'>{assignment.title}</Typography>
+                <Typography variant='body2' color='text.secondary'>{ru.variants.choose}</Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {variants.map((variant) => (
+                        <Button key={variant.id} variant='contained' onClick={() => void chooseVariant(variant.id)} sx={{ whiteSpace: 'normal' }}>
+                            {variant.title || ru.variants.chosen(variant.label)}
+                        </Button>
+                    ))}
+                </Box>
+                <Button onClick={onClose}>{ru.common.close}</Button>
+            </Card>
+        );
+    }
 
     // Determine denominator for display purposes
     const gradeDenom = typeof grade === 'number' ? (grade <= 1 ? 1 : 10) : null;

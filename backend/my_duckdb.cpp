@@ -703,6 +703,11 @@ Common::comparision_result MyDuckDB::compare(const results_info &ref, const resu
                 msg << "❌ You did not create the table structure for '" << r.table << "'.\n";
                 comp.next_steps.push_back("Ensure the table " + r.table + " exists with the correct columns.");
             }
+            else if (r.op == "table_dropped")
+            {
+                msg << "❌ You did not drop the table '" << r.table << "'.\n";
+                comp.next_steps.push_back("DROP TABLE " + r.table + ";");
+            }
             else if (r.op == "column_added")
             {
                 msg << "❌ You did not add the column '" << r.info
@@ -800,6 +805,11 @@ Common::comparision_result MyDuckDB::compare(const results_info &ref, const resu
             {
                 msg << "⚠️ You defined an unexpected table structure for '" << s.table << "'.\n";
                 comp.next_steps.push_back("Drop or ignore the extra table definition for " + s.table + ".");
+            }
+            else if (s.op == "table_dropped")
+            {
+                msg << "⚠️ You dropped '" << s.table << "', which should still exist.\n";
+                comp.next_steps.push_back("Do not drop " + s.table + ".");
             }
             else if (s.op == "column_added")
             {

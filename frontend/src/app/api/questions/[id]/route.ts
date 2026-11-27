@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initSchema, query, withCourseContext, withInstructorContext } from '@/lib/db';
 import { parseAuthHeader, verifyJwt } from '@/lib/auth';
+import { studentMayUseQuestion } from '@/lib/drawAccess';
 
 let initialized = false;
 async function ensureInit() { if (!initialized) { await initSchema(); initialized = true; } }
@@ -27,6 +28,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 q.use_default_grading as "useDefaultGrading", q.grading_options as "gradingOptions"
             FROM questions q WHERE q.id=$1 AND q.owner_id = current_setting('app.current_instructor')::uuid LIMIT 1`, [id]));
         if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        if (payload.role === 'student') {
+            const allowed = await run(() => studentMayUseQuestion(String(payload.email || ''), id));
+            if (!allowed) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+            const row = { ...(rows[0] as Record<string, unknown>) };
+            delete row.modelSql;
+            delete row.modelQueries;
+            delete row.initSql;
+            delete row.gradingOptions;
+            return NextResponse.json(row);
+        }
         return NextResponse.json(rows[0]);
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'failed';

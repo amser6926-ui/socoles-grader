@@ -636,9 +636,14 @@ void StudentQuery::create_output(Query_Engine &qe)
             }
         }
     }
-    catch (const std::exception &)
+    catch (const std::exception &e)
     {
-        // somehow the dbms crashed therefore we restore it from the copy.
+        std::string msg = e.what();
+        if (msg.find("sandbox") != std::string::npos)
+        {
+            set_feedback(get_feedback() + " " + msg);
+            return;
+        }
         set_feedback(get_feedback() + "DBMS crashed.");
         std::cout << "DBMS crashed. Crashed at student id: " << get_id() << std::endl;
     }

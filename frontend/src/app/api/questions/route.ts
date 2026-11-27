@@ -24,6 +24,42 @@ export async function GET(req: NextRequest) {
         const run = <T>(fn: () => Promise<T>) => courseId
             ? withCourseContext(instructorId, courseId, fn)
             : withInstructorContext(instructorId, fn);
+        if (payload.role === 'student') {
+            const { rows } = await run(() => query<Question>(`
+            SELECT q.id, q.title, q.difficulty, q.status,
+                   COALESCE(stats.solved, 0)::int AS attempts,
+                   q.max_points as "maxPoints"
+              FROM questions q
+              LEFT JOIN LATERAL (
+                    SELECT COUNT(DISTINCT qs.student) AS solved
+                      FROM question_submissions qs
+                     WHERE qs.question_id = q.id
+                       AND qs.owner_id = current_setting('app.current_instructor')::uuid
+                       AND qs.course_id = current_setting('app.current_course', true)::uuid
+                       AND qs.grade IS NOT NULL
+                       AND ((q.max_points > 0 AND qs.grade >= q.max_points * 0.999) OR qs.status = 'Auto-graded')
+              ) stats ON true
+             WHERE q.owner_id = current_setting('app.current_instructor')::uuid
+               AND q.course_id = current_setting('app.current_course', true)::uuid
+               AND (
+                    EXISTS (
+                        SELECT 1 FROM assignment_questions aq
+                        JOIN assignments a ON a.id = aq.assignment_id
+                        WHERE aq.question_id = q.id AND a.draw_count IS NULL
+                          AND a.owner_id = current_setting('app.current_instructor')::uuid
+                          AND a.course_id = current_setting('app.current_course', true)::uuid
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM assignment_draws d
+                        WHERE d.student = $1 AND q.id = ANY(d.question_ids)
+                          AND d.owner_id = current_setting('app.current_instructor')::uuid
+                          AND d.course_id = current_setting('app.current_course', true)::uuid
+                    )
+               )
+             ORDER BY q.created_at DESC
+             LIMIT 500`, [String(payload.email || '')]));
+            return NextResponse.json(rows);
+        }
         // Attempts derived metric restricted to this instructor's data.
         const { rows } = await run(() => query<Question>(`
             SELECT q.id,

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const assignmentId = searchParams.get('assignmentId');
         if (!assignmentId) return NextResponse.json({ error: 'assignmentId required' }, { status: 400 });
-        const { rows } = await run(() => query(`SELECT aq.assignment_id as "assignmentId", aq.question_id as "questionId", aq.position, aq.points_override as "pointsOverride",
+        const { rows } = await run(() => query(`SELECT aq.assignment_id as "assignmentId", aq.question_id as "questionId", aq.position, aq.points_override as "pointsOverride", aq.variant_id as "variantId",
              q.title, q.difficulty, q.status, q.attempts, q.max_points as "maxPoints"
              FROM assignment_questions aq
              JOIN questions q ON q.id = aq.question_id
@@ -49,12 +49,12 @@ export async function POST(req: NextRequest) {
             ? withCourseContext(instructorId, courseId, fn)
             : withInstructorContext(instructorId, fn);
         const body = await req.json();
-        const { assignmentId, questionId, position, pointsOverride } = body || {};
+        const { assignmentId, questionId, position, pointsOverride, variantId } = body || {};
         if (!assignmentId || !questionId) return NextResponse.json({ error: 'assignmentId & questionId required' }, { status: 400 });
-        await run(() => query(`INSERT INTO assignment_questions (assignment_id, question_id, position, points_override, owner_id)
-            VALUES ($1,$2,COALESCE($3,0),$4,current_setting('app.current_instructor')::uuid)
+        await run(() => query(`INSERT INTO assignment_questions (assignment_id, question_id, position, points_override, variant_id, owner_id)
+            VALUES ($1,$2,COALESCE($3,0),$4,$5,current_setting('app.current_instructor')::uuid)
             ON CONFLICT (assignment_id, question_id)
-            DO UPDATE SET position = EXCLUDED.position, points_override = EXCLUDED.points_override;`, [assignmentId, questionId, position ?? 0, pointsOverride ?? null]));
+            DO UPDATE SET position = EXCLUDED.position, points_override = EXCLUDED.points_override, variant_id = COALESCE(EXCLUDED.variant_id, assignment_questions.variant_id);`, [assignmentId, questionId, position ?? 0, pointsOverride ?? null, variantId ?? null]));
         const { rows } = await run(() => query(`SELECT aq.assignment_id as "assignmentId", aq.question_id as "questionId", aq.position, aq.points_override as "pointsOverride",
              q.title, q.difficulty, q.status, q.attempts, q.max_points as "maxPoints"
              FROM assignment_questions aq JOIN questions q ON q.id = aq.question_id
